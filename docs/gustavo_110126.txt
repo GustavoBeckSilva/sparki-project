@@ -1,0 +1,38 @@
+
+---------------------------------------------------------------------------------------------------
+
+Feito:
+
+- Containerização (Docker): Container rodando Ubuntu 22.04, que garante que o ROS rode sem conflitos.
+
+- -v $(pwd)/src:/root/ros2_ws/src faz com que a pasta src seja a mesma do container.
+
+- start_docker.sh: todas as configurações de rede, vídeo e permissões contidos num script.
+
+---------------------------------------------------------------------------------------------------
+
+Comando úteis:
+
+./start_docker.sh - Constrói a imagem, inicia o container e abre o terminal dele.
+
+docker exec -it edge bash - Entra no container que já está rodando.
+
+colcon build - Processa os pacotes.
+
+source install/setup.bash - Atualiza o ambiente para reconhecer as mudanças.
+
+---------------------------------------------------------------------------------------------------
+
+Workflow
+
+Codar:
+    - VSCode, pasta edge.
+    - Scripts na pasta src
+
+Rodar:
+    - ./start_docker.sh.
+    - colcon build.
+    - source install/setup.bash.
+    - ros2 launch robo_criado script_criado.launch.py.
+
+---------------------------------------------------------------------------------------------------
