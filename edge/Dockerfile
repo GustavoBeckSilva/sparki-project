@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y \
     ros-humble-robot-localization
 
 ENV TURTLEBOT3_MODEL=waffle_pi
-ENV GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/humble/share/turtlebot3_gazebo/models
+ENV GAZEBO_MODEL_PATH=/opt/ros/humble/share/turtlebot3_gazebo/models
 
 WORKDIR /root/ros2_ws
 

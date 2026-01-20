@@ -1,0 +1,4 @@
+float32 distancia_metros
+---
+bool sucesso
+string mensagem
