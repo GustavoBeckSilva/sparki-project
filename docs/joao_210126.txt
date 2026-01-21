@@ -1,0 +1,103 @@
+---------------------------------------------------------------------------------------------------
+
+Feito:
+
+- Backend Node.js escrito em TypeScript:
+  - Uso da biblioteca roslib para comunicação via WebSocket.
+  - Conexão direta com o rosbridge_server.
+  - Tratamento de eventos de conexão, erro e desconexão.
+  - Estrutura preparada para envio de comandos ROS a partir da API.
+
+- Configuração correta do roslib no Node.js:
+  - Ajuste do projeto para usar CommonJS.
+  - Configuração do tsconfig.json para compatibilidade com roslib.
+
+- Comunicação com rosbridge validada:
+  - Conexão WebSocket funcional via ws://localhost:9090.
+
+- Docker:
+  - rosbridge_server rodando dentro do container.
+  - Porta 9090 ativa no container.
+
+---------------------------------------------------------------------------------------------------
+Configuração do Backend (TypeScript):
+
+- package.json:
+  - Módulo configurado como CommonJS.
+  - Scripts:
+      - dev: execução via ts-node
+      - build: compilação TypeScript
+      - start: execução do código compilado
+
+- tsconfig.json:
+  - target: ES2020
+  - module: CommonJS
+  - moduleResolution: node
+  - esModuleInterop habilitado
+
+---------------------------------------------------------------------------------------------------
+Como rodar SOMENTE o ROSBridge
+
+1. Entrar no container Docker:
+
+	docker exec -it edge bash
+
+2. Garantir ambiente ROS carregado:
+
+	source /opt/ros/humble/setup.bash
+
+3. Iniciar o rosbridge_server:
+
+	ros2 launch rosbridge_server rosbridge_websocket_launch.xml
+
+4. Verificação se funcionou:
+
+	# Teste errado (HTTP) — esperado falhar
+	curl http://localhost:9090
+
+	# Resposta esperada:
+	Can "Upgrade" only to "WebSocket".
+
+---------------------------------------------------------------------------------------------------
+Como rodar o Backend (API)
+
+1. No host ou WSL, entrar na pasta do backend:
+
+	cd sparki-project/backend
+
+2. Instalar dependências (se necessário):
+
+	npm install
+
+3. Rodar a API:
+
+	npm run dev
+
+4. Saída esperada:
+
+	API rodando em http://localhost:3000
+	Conectado ao ROS2 via rosbridge
+
+---------------------------------------------------------------------------------------------------
+Observações Importantes:
+
+- O rosbridge_server:
+  - NÃO responde requisições HTTP.
+  - Aceita apenas conexões WebSocket.
+
+- Não é necessário expor a porta 9090 do Docker
+  se o backend estiver rodando dentro do mesmo ambiente
+  (WSL ou container).
+
+- Se a porta 9090 já estiver em uso:
+  - Outro rosbridge já está rodando.
+  - É necessário finalizar o processo antes de subir outro ou subir este em outra porta.
+
+---------------------------------------------------------------------------------------------------
+Status Atual:
+
+✔ Backend conecta corretamente ao rosbridge  
+✔ WebSocket funcional  
+✔ Base pronta para envio de comandos ROS via API  
+
+---------------------------------------------------------------------------------------------------

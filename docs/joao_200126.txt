@@ -1,0 +1,90 @@
+---------------------------------------------------------------------------------------------------
+Feito:
+
+- Criação do pacote sparki_interfaces:
+  - Definição do serviço customizado MoveRobot.srv.
+  - Interface para envio de comandos de deslocamento por distância (em metros).
+
+- Criação do pacote sparki_core:
+  - Implementação do node movement_controller em Python.
+  - Execução de movimento linear baseado em distância solicitada.
+  - Implementação de parada de emergência ao detectar obstáculo.
+  - Criação do serviço /move_robot usando MoveRobot.srv.
+  - Retorno de sucesso ou falha com mensagem explicativa.
+
+- Configuração correta de executáveis ROS 2:
+  - Registro dos nodes Python no setup.py via entry_points.
+  - Tornando move_robot_bridge executável via ros2 run.
+
+- Estruturação do workspace ROS 2:
+  - Organização correta dos pacotes dentro de ros2_ws.
+  - Build e source do workspace via colcon.
+
+- Configuração e uso do rosbridge_server:
+  - Execução do rosbridge via WebSocket.
+  - Comunicação funcional via porta 9090.
+  - Validação de acesso externo ao rosbridge (WebSocket ativo).
+
+---------------------------------------------------------------------------------------------------
+Comandos úteis:
+
+# Iniciar o rosbridge (ponte WebSocket)
+ros2 launch rosbridge_server rosbridge_websocket_launch.xml
+
+# Iniciar o node de controle do robô
+ros2 run sparki_core movement_controller
+
+# Iniciar o bridge auxiliar
+ros2 run sparki_core move_robot_bridge
+
+# Listar executáveis disponíveis no pacote
+ros2 pkg executables sparki_core
+
+---------------------------------------------------------------------------------------------------
+Workflow
+
+Codar:
+	- VSCode, pasta edge.
+	- Alterações em arquivos .py:
+		- Não exigem recompilação.
+		- Apenas reiniciar o node.
+	- Alterações em:
+		- .srv
+		- setup.py
+		- package.xml
+	  Exigem rebuild do workspace.
+
+Rodar qualquer node:
+	1. Entrar no container:
+		docker exec -it edge bash
+
+	2. Build do workspace:
+		colcon build
+		source install/setup.bash
+
+	3. Execução do node:
+		ros2 run sparki_core movement_controller
+
+	4. Envio de comando de teste:
+		ros2 service call /move_robot sparki_interfaces/srv/MoveRobot "{distancia_metros: 1.0}"
+
+    5. Comando fazer requisição via API de movimentação:
+        curl -X POST http://localhost:3000/move \
+            -H "Content-Type: application/json" \
+            -d '{"distancia": 1.0}'
+
+
+---------------------------------------------------------------------------------------------------
+Manutenção:
+
+- Sempre que criar ou alterar:
+	- Serviços (.srv)
+	- setup.py
+	- package.xml
+
+Executar:
+	rm -rf build/ install/ log/
+	colcon build
+	source install/setup.bash
+
+---------------------------------------------------------------------------------------------------
