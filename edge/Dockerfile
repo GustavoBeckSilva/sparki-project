@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y \
 
 RUN apt-get update && apt-get install -y \
     ros-humble-navigation2 \
+    ros-humble-rosbridge-server \
     ros-humble-nav2-bringup \
     ros-humble-slam-toolbox \
     ros-humble-turtlebot3-gazebo \
@@ -21,4 +22,6 @@ ENV GAZEBO_MODEL_PATH=/opt/ros/humble/share/turtlebot3_gazebo/models
 
 WORKDIR /root/ros2_ws
 
+# Carrega o ambiente ROS2 automaticamente ao iniciar o container
+RUN echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc
 CMD ["bash"]

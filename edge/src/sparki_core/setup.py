@@ -25,6 +25,7 @@ setup(
     entry_points={
         'console_scripts': [
             'controller = sparki_core.movement_controller:main',
+            'move_robot_bridge = sparki_core.move_robot_bridge:main',
         ],
     },
 )

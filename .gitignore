@@ -12,6 +12,7 @@ __pycache__/
 venv/
 .venv/
 
+# Simulation generated files
 simulation/build/
 simulation/install/
 simulation/log/
@@ -23,3 +24,8 @@ Thumbs.db
 .idea/
 
 docker/pgdata/
+
+# ROS2 generated files
+edge/src/build/
+edge/src/install/
+edge/src/log/
