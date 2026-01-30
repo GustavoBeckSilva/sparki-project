@@ -1,6 +1,5 @@
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const ROSLIB = require('roslib');
-import { Twist } from './model/Twist';
 
 const ROSBRIDGE_URL = 'ws://localhost:9090';
 
@@ -30,5 +29,11 @@ export const moveRobotTopic = new ROSLIB.Topic({
     ros,
     name: '/move_robot_cmd',
     messageType: 'std_msgs/Float32'
+});
+
+export const sequenceExecutorStatusTopic = new ROSLIB.Service({
+    ros,
+    name: '/move_sequence',
+    ServiceType: 'sparki_interfaces/srv/MoveSequence/'
 });
 
