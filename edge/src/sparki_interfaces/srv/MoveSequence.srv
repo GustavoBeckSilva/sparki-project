@@ -1,0 +1,4 @@
+sparki_interfaces/MoveCmd[] commands
+---
+bool sucesso
+string mensagem

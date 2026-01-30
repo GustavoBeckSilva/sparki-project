@@ -34,8 +34,8 @@ ros2 launch rosbridge_server rosbridge_websocket_launch.xml
 # Iniciar o node de controle do robô
 ros2 run sparki_core movement_controller
 
-# Iniciar o bridge auxiliar
-ros2 run sparki_core move_robot_bridge
+# Iniciar o controller de sequência de movimentações
+ros2 run sparki_core sequence_executor
 
 # Listar executáveis disponíveis no pacote
 ros2 pkg executables sparki_core
@@ -63,15 +63,25 @@ Rodar qualquer node:
 		source install/setup.bash
 
 	3. Execução do node:
-		ros2 run sparki_core movement_controller
+		ros2 run sparki_core sequence_executor
 
 	4. Envio de comando de teste:
-		ros2 service call /move_robot sparki_interfaces/srv/MoveRobot "{distancia_metros: 1.0}"
+		ros2 service call /move_sequence sparki_interfaces/srv/MoveSequence '{
+			"commands": [
+			{ "linear": 0.2, "angular": 0.0, "duration": 2 },
+			{ "linear": 0.0, "angular": 1.57, "duration": 1 },
+			{ "linear": 0.2, "angular": 0.0, "duration": 1 }
+			]
+		}'
 
     5. Comando fazer requisição via API de movimentação:
-        curl -X POST http://localhost:3000/move \
-            -H "Content-Type: application/json" \
-            -d '{"distancia": 1.0}'
+        curl -X POST http://localhost:3000/move_sequence   -H "Content-Type: application/json"   -d '{
+			"commands": [
+			{ "linear": 0.2, "angular": 0.0, "duration": 2 },
+			{ "linear": 0.0, "angular": 1.57, "duration": 1 },
+			{ "linear": 0.2, "angular": 0.0, "duration": 1 }
+			]
+		}'
 
 
 ---------------------------------------------------------------------------------------------------

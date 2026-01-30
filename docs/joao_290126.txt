@@ -1,0 +1,95 @@
+---------------------------------------------------------------------------------------------------
+
+Feito:
+
+- Atualizado código para suportar requisições de caminho complexas como sequências de movimentos a serem executados
+
+---------------------------------------------------------------------------------------------------
+NOVO — Integração avançada com ROS 2:
+
+- Criação de interfaces customizadas em ROS 2 (sparki_interfaces):
+  - Mensagem MoveCmd:
+      - linear (float32)
+      - angular (float32)
+      - duration (float32)
+  - Service MoveSequence:
+      - Recebe um array de MoveCmd
+      - Retorna status de sucesso e mensagem
+
+- Criação do nó ROS 2 "SequenceExecutor":
+  - Implementado em Python (rclpy).
+  - Registra o service /move_sequence.
+  - Executa sequências de movimento de forma sequencial.
+  - Publica comandos no tópico /cmd_vel (geometry_msgs/Twist).
+  - Garante parada do robô ao final da sequência.
+
+- Suporte a movimentos mais complexos:
+  - Movimento para frente e para trás.
+  - Curvas e rotações.
+  - Sequências compostas de movimentos.
+  - Controle de tempo por comando (duration).
+
+---------------------------------------------------------------------------------------------------
+Integração API ROS via Service:
+
+- Exposição do service ROS /move_sequence na API HTTP:
+  - API cria um ROSLIB.Service conectado ao rosbridge.
+  - Comunicação feita via WebSocket, sem dependência direta do ROS no backend.
+
+- Endpoint HTTP criado:
+  - POST /move_sequence
+  - Recebe sequência de comandos via JSON.
+  - Converte requisição HTTP em chamada de service ROS.
+
+- Validação de dados:
+  - Verificação se commands é um array válido.
+  - Tratamento de erros de comunicação com o ROS.
+
+
+---------------------------------------------------------------------------------------------------
+Como rodar o Backend (API)
+
+1. No host ou WSL, entrar na pasta do backend:
+
+	cd sparki-project/backend
+
+2. Instalar dependências (se necessário):
+
+	npm install
+
+3. Rodar a API:
+
+	npm run dev
+
+4. Saída esperada:
+
+	API rodando em http://localhost:3000
+	Conectado ao ROS2 via rosbridge
+
+---------------------------------------------------------------------------------------------------
+Exemplo de uso da API (/move_sequence)
+
+POST /move_sequence
+
+Body (JSON):
+
+{
+  "commands": [
+    { "linear": 0.2, "angular": 0.0, "duration": 2.0 },
+    { "linear": 0.0, "angular": 1.0, "duration": 1.5 },
+    { "linear": -0.2, "angular": 0.0, "duration": 1.0 }
+  ]
+}
+
+---------------------------------------------------------------------------------------------------
+Observações Importantes:
+
+- O rosbridge_server:
+  - NÃO responde requisições HTTP, porém a API que se conecta ao rosbridge, sim se comunica via HTTP.
+  - Aceita apenas conexões WebSocket.
+
+- O service ROS precisa estar rodando
+  antes da API tentar chamá-lo.
+
+- Não é necessário expor a porta 9090 do Docker
+  se o backend estiver no mesmo ambiente (WSL ou container).
