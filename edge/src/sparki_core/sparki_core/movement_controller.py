@@ -79,8 +79,6 @@ class MovementController(Node):
             
         distancia_alvo = abs(distancia_alvo)
         
-        rate = self.create_rate(10)
-
         while rclpy.ok():
 
             if msg.linear.x > 0 and self.obstaculo_frente:
@@ -102,7 +100,7 @@ class MovementController(Node):
                 return response
             
             self.cmd_vel_pub.publish(msg)
-            rate.sleep()
+            time.sleep(0.1)
 
     def parar(self):
         self.cmd_vel_pub.publish(Twist())

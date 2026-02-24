@@ -19,6 +19,9 @@ ros.on('close', () => {
     console.log('Conexão com ROS encerrada');
 });
 
+
+/*
+
 export const cmdVel = new ROSLIB.Topic({
     ros,
     name: '/cmd_vel',
@@ -37,3 +40,10 @@ export const sequenceExecutorStatusTopic = new ROSLIB.Service({
     ServiceType: 'sparki_interfaces/srv/MoveSequence/'
 });
 
+*/
+
+export const moveRobotService = new ROSLIB.Service({
+    ros,
+    name: '/move_robot',
+    serviceType: 'sparki_interfaces/srv/MoveRobot'
+});

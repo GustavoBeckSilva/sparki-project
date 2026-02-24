@@ -30,7 +30,7 @@ Codar:
 
 Rodar:
 	- 1. Terminal Simulação: ./start_docker.sh -> ros2 launch turtlebot3_gazebo turtlebot3_world.launch.py. 
-	- 2. Terminal Cérebro: docker exec -it edge bash -> colcon build -> source install/setup.bash -> ros2 run sparki_core controller. 
+	- 2. Terminal Cérebro: docker exec -it edge bash -> colcon build -> source install/setup.bash -> ros2 run sparki_core controller.
 	- 3. Terminal Comandos: docker exec -it edge bash -> source install/setup.bash -> ros2 service call /move_robot sparki_interfaces/srv/MoveRobot "{distancia_metros: 1.0}"
 
 Manutenção: 

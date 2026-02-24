@@ -1,4 +1,4 @@
-import { moveRobotTopic } from './ros';
+import { moveRobotService } from './ros';
 import { app } from './server';
 
 const PORT = 3000;

@@ -1,53 +1,46 @@
 import express, { Request, Response } from 'express';
-import { moveRobotTopic, sequenceExecutorStatusTopic } from './ros';
-import { MoveCmd } from './model/MoveCmd';
+import { moveRobotService } from './ros';
 
 export const app = express();
 
 app.use(express.json());
 
-app.post('/move', (req, res) => {
+app.post('/move', async (req: Request, res: Response) => {
     const { distancia } = req.body;
 
     if (typeof distancia !== 'number') {
-        return res.status(400).json({ error: 'Distância inválida' });
+        return res.status(400).json({ error: 'Distância inválida. Envie um número.' });
     }
 
-    moveRobotTopic.publish({ data: distancia });
+    console.log(`[Backend] Solicitando ao robô para mover ${distancia} metros...`);
 
-    res.json({
-        status: 'enviado',
-        distancia
-    });
-});
-
-app.post('/move_sequence', async (req: Request, res: Response) => {
-    const sequence = req.body.commands as MoveCmd[];
-
-    console.log('Recebida sequência:', sequence);
-
-    if (!Array.isArray(sequence)) {
-        return res.status(400).json({ error: 'Sequência inválida!' });
-    }
+    const request = {
+        distancia_metros: distancia
+    };
 
     try {
-        const response = await new Promise((resolve, reject) => {
-            sequenceExecutorStatusTopic.callService(
-                {
-                    commands: sequence
-                },
+        const response: any = await new Promise((resolve, reject) => {
+            moveRobotService.callService(
+                request,
                 (result: any) => resolve(result),
                 (err: any) => reject(err)
             );
         });
 
-        res.status(200).json({
-            status: 'Comando executado',
-            resposta: response
-        });
+        if (response.sucesso) {
+            res.status(200).json({
+                status: 'sucesso',
+                mensagem: response.mensagem
+            });
+        } else {
+            res.status(400).json({
+                status: 'bloqueado',
+                mensagem: response.mensagem
+            });
+        }
 
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Erro ao executar a sequência' });
+        console.error('Erro de comunicação com o Edge:', error);
+        res.status(500).json({ error: 'Erro de conexão com o robô' });
     }
 });
