@@ -1,0 +1,9 @@
+---------------------------------------------------------------------------------------------------
+Feito:
+
+- mudança em consumo da api para com o edge: criada rota que consome o serviço move_robot, o qual
+recebe por parametro uma distancia em metros e verifica se haverá colisões.
+
+- a rota é acessada via post com /move_robot
+
+---------------------------------------------------------------------------------------------------

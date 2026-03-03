@@ -1,0 +1,31 @@
+---------------------------------------------------------------------------------------------------
+
+Feito:
+
+- Refatoração do Edge: Exclusão dos scripts redundantes e unificação do motion_controller e sequence_executor dentro do movement_controller.py.
+
+- Anticolisão: Sistema de freio que protege o robô em todas as formas de movimento.
+
+- ./init_system.sh: script que compila o código automaticamente (colcon build), inicia o simulador Gazebo, liga a ponte rosbridge e executa o nó controlador central.
+
+- readapta as rotas /move e /move_sequence, configurando o roslibjs para se comunicar com os serviços unificados do Edge.
+
+---------------------------------------------------------------------------------------------------
+
+Comando úteis:
+
+./init_system.sh - Rodar DENTRO do container.
+
+docker exec -it edge bash - Entra no container que já está rodando para abrir um novo terminal.
+
+---------------------------------------------------------------------------------------------------
+
+Workflow
+
+Rodar:
+- No Host: ./start_docker.sh
+- Dentro do Container: ./init_system.sh
+- No Backend: npm run dev
+- Enviar comandos HTTP e observar a simulação
+
+---------------------------------------------------------------------------------------------------

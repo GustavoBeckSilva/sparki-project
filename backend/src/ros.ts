@@ -1,4 +1,4 @@
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+
 const ROSLIB = require('roslib');
 
 const ROSBRIDGE_URL = 'ws://localhost:9090';
@@ -19,31 +19,14 @@ ros.on('close', () => {
     console.log('Conexão com ROS encerrada');
 });
 
-
-/*
-
-export const cmdVel = new ROSLIB.Topic({
-    ros,
-    name: '/cmd_vel',
-    messageType: 'geometry_msgs/Twist'
-});
-
-export const moveRobotTopic = new ROSLIB.Topic({
-    ros,
-    name: '/move_robot_cmd',
-    messageType: 'std_msgs/Float32'
-});
-
-export const sequenceExecutorStatusTopic = new ROSLIB.Service({
-    ros,
-    name: '/move_sequence',
-    ServiceType: 'sparki_interfaces/srv/MoveSequence/'
-});
-
-*/
-
 export const moveRobotService = new ROSLIB.Service({
     ros,
     name: '/move_robot',
     serviceType: 'sparki_interfaces/srv/MoveRobot'
+});
+
+export const moveSequenceService = new ROSLIB.Service({
+    ros,
+    name: '/move_sequence',
+    serviceType: 'sparki_interfaces/srv/MoveSequence'
 });
