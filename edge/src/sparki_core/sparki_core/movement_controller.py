@@ -7,7 +7,7 @@ from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
 
-from sparki_interfaces.srv import MoveRobot, MoveSequence
+from sparki_interfaces.srv import MoveRobot, MoveSequence, NavigateToWaypoint
 from sparki_interfaces.msg import MoveCmd
 
 import math
@@ -43,6 +43,13 @@ class UnifiedController(Node):
         self.srv_sequence = self.create_service(
             MoveSequence, '/move_sequence', self.handle_sequence_request,
             callback_group=self.callback_group)
+        
+        self.srv_navigate = self.create_service(
+            NavigateToWaypoint, '/navigate_to_waypoint',
+            self.handle_navigate_request,
+            callback_group=self.callback_group)
+
+        self.yaw_atual = 0.0
 
         self.x_atual = 0.0
         self.y_atual = 0.0
@@ -53,6 +60,71 @@ class UnifiedController(Node):
     def odom_callback(self, msg):
         self.x_atual = msg.pose.pose.position.x
         self.y_atual = msg.pose.pose.position.y
+
+        q = msg.pose.pose.orientation
+        siny = 2.0 * (q.w * q.z + q.x * q.y)
+        cosy = 1.0 - 2.0 * (q.y * q.y + q.z * q.z)
+        self.yaw_atual = math.atan2(siny, cosy)
+
+    
+    def handle_navigate_request(self, request, response):
+        alvo_x = request.x
+        alvo_y = request.y
+
+        dx = alvo_x - self.x_atual
+        dy = alvo_y - self.y_atual
+        # Faz o cálculo de arco tangente em radianos para decidir o ângulo que o robô precisa virar para chegar no destino
+        angulo_alvo = math.atan2(dy, dx)
+        # Faz o cálculo do módulo do vetor 
+        distancia = math.sqrt(dx**2 + dy**2)
+ 
+        delta_angulo = angulo_alvo - self.yaw_atual
+        # normalização do ângulo para o robô não virar desnecessariamente 
+        while delta_angulo > math.pi:  delta_angulo -= 2 * math.pi
+        while delta_angulo < -math.pi: delta_angulo += 2 * math.pi
+
+        self.get_logger().info(f"Rotacionando {math.degrees(delta_angulo):.1f}° depois movendo {distancia:.2f}m")
+
+        # Rotaciona no lugar
+        twist = Twist()
+        twist.angular.z = 0.5 if delta_angulo > 0 else -0.5
+        # O tempo é dado pelo cálculo (ângulo / velocidade)
+        tempo_rotacao = abs(delta_angulo) / 0.5
+
+        start = time.time()
+        # enquanto estiver dentro do tempo previsto publica a velocidade até finalizar a rotação
+        while time.time() - start < tempo_rotacao:
+            self.cmd_vel_pub.publish(twist)
+            time.sleep(0.1)
+        self.parar()
+        time.sleep(0.3)
+
+        # Move em linha reta monitorando obstáculos
+        twist = Twist()
+        twist.linear.x = 0.2
+        start_x, start_y = self.x_atual, self.y_atual
+
+        while rclpy.ok():
+            if self.obstaculo_frente:
+                self.parar()
+                response.sucesso = False
+                response.mensagem = f"Obstáculo detectado antes de atingir ({alvo_x}, {alvo_y})"
+                return response
+
+            # Distância já percorrida pelo robô, para determinar em que posição ele parou
+            # TODO: Salvar somente o x e y de onde o robô parou
+            percorrido = math.sqrt((self.x_atual - start_x)**2 + (self.y_atual - start_y)**2)
+            if percorrido >= distancia:
+                break
+
+            self.cmd_vel_pub.publish(twist)
+            time.sleep(0.1)
+
+        self.parar()
+        response.sucesso = True
+        response.mensagem = f"Waypoint ({alvo_x}, {alvo_y}) atingido."
+        self.get_logger().info(response.mensagem)
+        return response
 
     def scan_callback(self, msg):
         distancia_lida = msg.ranges[0]

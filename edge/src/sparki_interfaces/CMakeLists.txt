@@ -12,6 +12,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/MoveCmd.msg"
   "srv/MoveRobot.srv"
   "srv/MoveSequence.srv"
+  "srv/NavigateToWaypoint.srv"
 )
 
 ament_package()

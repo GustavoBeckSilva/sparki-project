@@ -1,0 +1,23 @@
+Log de atualizações:
+
+- Adicionado a compatibilidade com o mapa do prédio 5, fazendo o mapa abrir no rviz e o robô se localizar com base neste mapa;
+- Ainda estão ocorrendo problemas, o robô não está se localizando direito, provavelmente pela qualidade da imagem não ser ideal para occupancy grid;
+- Redefini os pontos de origem mas ainda não testei, deverá se testado e validado
+
+# Navegação via coordenadas
+
+- Implementei um serviço de handle_navigate_request no edge que receberá os pontos de localização no mapa e já converte isso para comandos válidos de movimentação
+- Também já estou consumindo esse serviço no backend via rosbridge e é possível fazer requisições de localizações via API
+- O formato do corpo das requisições será de {x: float32, y: float32}, indicando as coordenadas que deverão ser passadas
+
+
+# Exemplo de comando que pode ser utilizado direto no serviço:
+
+- ros2 service call /navigate_to_waypoint sparki_interfaces/srv/NavigateToWaypoint "{x: 2.0, y: 0.0}"
+
+(OBS: Deve estar num terminald dentro do docker)
+
+# A FAZER:
+
+- ajustar a acurácia da movimentação do robô no mapa, possivelmente o problema de detectar obstáculos está na qualidade da imagem e linhas das paredes muito finas
+- corrigir a escala do mapa para a escala real o que também pode estar interferindo na precisão

@@ -1,7 +1,7 @@
-image: map.png
+image: map.png # TODO: Melhorar a imagem da planta do if para reconhecer melhor as paredes e obstáculos
 mode: trinary
-resolution: 0.05
-origin: [0.0, 0.0, 0.0]
+resolution: 0.01
+origin: [-0.646924, -3.09145, 0] # TODO: Testar se esse ponto de origem vai estar correto
 occupied_thresh: 0.65
 free_thresh: 0.25
 negate: 0
