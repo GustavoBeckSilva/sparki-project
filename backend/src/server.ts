@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { moveRobotService, moveSequenceService } from './ros';
+import { moveRobotService, moveSequenceService, navigateToWaypoint } from './ros';
 
 export const app = express();
 
@@ -75,6 +75,48 @@ app.post('/move_sequence', async (req: Request, res: Response) => {
             });
         }
 
+    } catch (error) {
+        console.error('Erro de comunicação com o Edge:', error);
+        res.status(500).json({ error: 'Erro de conexão com o robô' });
+    }
+});
+
+app.post('/navigate', async (req, res) => {
+    const { waypoint } = req.body;
+
+    const WAYPOINTS: Record<string, { x: number, y: number }> = {
+        "origem": { x: 0.0, y: 0.0 },
+        "sala_1": { x: 3.0, y: 0.0 },
+        "corredor": { x: 6.0, y: 0.0 },
+        "sala_2": { x: 9.0, y: 0.0 },
+        "sala_3": { x: 9.0, y: 4.0 },
+    };
+
+    const alvo = WAYPOINTS[waypoint];
+    if (!alvo) {
+        return res.status(400).json({ erro: `Waypoint desconhecido: ${waypoint}` });
+    }
+
+    try {
+        const response: any = await new Promise((resolve, reject) => {
+            navigateToWaypoint.callService(
+                { x: alvo.x, y: alvo.y },
+                (result: any) => resolve(result),
+                (err: any) => reject(err)
+            );
+        });
+
+        if (response.sucesso) {
+            res.status(200).json({
+                status: 'sucesso',
+                mensagem: response.mensagem
+            });
+        } else {
+            res.status(400).json({
+                status: 'bloqueado',
+                mensagem: response.mensagem
+            });
+        }
     } catch (error) {
         console.error('Erro de comunicação com o Edge:', error);
         res.status(500).json({ error: 'Erro de conexão com o robô' });

@@ -30,3 +30,9 @@ export const moveSequenceService = new ROSLIB.Service({
     name: '/move_sequence',
     serviceType: 'sparki_interfaces/srv/MoveSequence'
 });
+
+export const navigateToWaypoint = new ROSLIB.Service({
+    ros,
+    name: '/navigate_to_waypoint',
+    serviceType: 'sparki_interfaces/srv/NavigateToWaypoint'
+});
