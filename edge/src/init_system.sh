@@ -43,11 +43,13 @@ echo "=========================================="
 echo " 4. Iniciando Controlador Main (Sparki)..."
 echo "=========================================="
 # O controlador fica rodando "preso" no terminal para você ver os logs
-ros2 run sparki_core controller
+ros2 run sparki_core controller &
 
-sleep 2
+sleep 10
 echo "=========================================="
 echo " 5. Iniciando o rviz (usado para visualizar o mapa do if)..."
 echo "=========================================="
 # Inicializa ele com base nas configurações modificadas no arquivo /config/map.rviz
+colcon build --packages-select sparki_interfaces sparki_core
+source install/setup.bash
 ros2 run rviz2 rviz2 -d /root/ros2_ws/src/sparki_core/config/map.rviz
