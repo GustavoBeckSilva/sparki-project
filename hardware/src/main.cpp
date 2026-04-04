@@ -6,14 +6,14 @@
 #include <rclc/executor.h>
 #include <geometry_msgs/msg/twist.h>
 
-#include <RoboCore_Vespa.h> 
+#include <RoboCore_Vespa.h>
 
-#define LED_PIN 2
+#define LED_PIN 15
 
 // Velocidade máxima mapeada para o range da Vespa (0-100)
 #define VEL_MAX 100
-#define VEL_LINEAR_MAX 0.5   // m/s máximo esperado do ROS
-#define VEL_ANGULAR_MAX 1.0  // rad/s máximo esperado do ROS
+#define VEL_LINEAR_MAX 0.5  // m/s máximo esperado do ROS
+#define VEL_ANGULAR_MAX 1.0 // rad/s máximo esperado do ROS
 
 rcl_subscription_t subscriber;
 geometry_msgs__msg__Twist msg;
@@ -22,22 +22,25 @@ rclc_support_t support;
 rcl_allocator_t allocator;
 rcl_node_t node;
 
-VespaMotors motors;  // <- objeto dos motores
+VespaMotors motors; // <- objeto dos motores
 
 // Converte velocidade ROS (-1.0 a 1.0) para Vespa (-100 a 100)
-int toVespaSpeed(float ros_speed, float max_speed) {
+int toVespaSpeed(float ros_speed, float max_speed)
+{
   int speed = (int)((ros_speed / max_speed) * VEL_MAX);
   return constrain(speed, -VEL_MAX, VEL_MAX);
 }
 
-void cmd_vel_callback(const void * msgin) {
-  const geometry_msgs__msg__Twist * twist = (const geometry_msgs__msg__Twist *)msgin;
+void cmd_vel_callback(const void *msgin)
+{
+  const geometry_msgs__msg__Twist *twist = (const geometry_msgs__msg__Twist *)msgin;
 
-  float linear  = twist->linear.x;
+  float linear = twist->linear.x;
   float angular = twist->angular.z;
 
   // Parar
-  if (linear == 0.0 && angular == 0.0) {
+  if (linear == 0.0 && angular == 0.0)
+  {
     motors.stop();
     digitalWrite(LED_PIN, LOW);
     return;
@@ -46,24 +49,30 @@ void cmd_vel_callback(const void * msgin) {
   digitalWrite(LED_PIN, HIGH);
 
   // Só linear — andar para frente/trás
-  if (angular == 0.0) {
+  if (angular == 0.0)
+  {
     int speed = toVespaSpeed(linear, VEL_LINEAR_MAX);
-    if (speed > 0) motors.forward(abs(speed));
-    else           motors.backward(abs(speed));
+    if (speed > 0)
+      motors.forward(abs(speed));
+    else
+      motors.backward(abs(speed));
     return;
   }
 
   // Só angular — rotacionar no lugar
-  if (linear == 0.0) {
+  if (linear == 0.0)
+  {
     int speed = toVespaSpeed(angular, VEL_ANGULAR_MAX);
     // angular > 0 = esquerda, angular < 0 = direita
-    if (speed > 0) motors.turn(-abs(speed),  abs(speed));  // gira esquerda
-    else           motors.turn( abs(speed), -abs(speed));  // gira direita
+    if (speed > 0)
+      motors.turn(-abs(speed), abs(speed)); // gira esquerda
+    else
+      motors.turn(abs(speed), -abs(speed)); // gira direita
     return;
   }
 
   // Linear + angular — curva
-  int vel_linear  = toVespaSpeed(linear,  VEL_LINEAR_MAX);
+  int vel_linear = toVespaSpeed(linear, VEL_LINEAR_MAX);
   int vel_angular = toVespaSpeed(angular, VEL_ANGULAR_MAX);
 
   int vel_esq = constrain(vel_linear - vel_angular, -VEL_MAX, VEL_MAX);
@@ -71,32 +80,47 @@ void cmd_vel_callback(const void * msgin) {
   motors.turn(vel_esq, vel_dir);
 }
 
-void setup() {
+void setup()
+{
   Serial.begin(115200);
   pinMode(LED_PIN, OUTPUT);
 
-  IPAddress agent_ip(192, 168, 0, 100); // <- seu IP
+  IPAddress agent_ip(192, 168, 18, 22); // <- seu IP
   size_t agent_port = 8888;
-  char ssid[] = "NomeRede";             // <- sua rede
-  char psk[]  = "SenhaRede";            // <- sua senha
+  char ssid[] = "Fernando_2.4G"; // <- sua rede
+  char psk[] = "16032005";       // <- sua senha
 
+  Serial.println("=== Vespa iniciando ===");
   set_microros_wifi_transports(ssid, psk, agent_ip, agent_port);
-  delay(2000);
 
+  Serial.println("WiFi configurado, aguardando conexao...");
+  delay(2000);
+  Serial.print("IP da Vespa na rede: ");
+  Serial.println(WiFi.localIP());
+  Serial.print("Tentando conectar ao agente: ");
+  Serial.println(agent_ip);
+
+  Serial.println("Iniciando micro-ROS...");
   allocator = rcl_get_default_allocator();
   rclc_support_init(&support, 0, NULL, &allocator);
+
+  Serial.println("Support iniciado");
   rclc_node_init_default(&node, "esp32_hardware_node", "", &support);
 
+  Serial.println("Node criado");
   rclc_subscription_init_default(
-    &subscriber, &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
-    "/cmd_vel"
-  );
+      &subscriber, &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
+      "/cmd_vel");
 
+  Serial.println("Subscriber criado");
   rclc_executor_init(&executor, &support.context, 1, &allocator);
   rclc_executor_add_subscription(&executor, &subscriber, &msg, &cmd_vel_callback, ON_NEW_DATA);
+
+  Serial.println("=== Setup completo ===");
 }
 
-void loop() {
+void loop()
+{
   rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
 }

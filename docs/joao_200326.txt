@@ -21,3 +21,7 @@ Log de atualizações:
 
 - ajustar a acurácia da movimentação do robô no mapa, possivelmente o problema de detectar obstáculos está na qualidade da imagem e linhas das paredes muito finas
 - corrigir a escala do mapa para a escala real o que também pode estar interferindo na precisão
+
+# Comando para chamar o tópico /cmd_vel:
+  ros2 topic pub /cmd_vel geometry_msgs/msg/Twist \
+    "{linear: {x: 0.2}, angular: {z: 0.0}}" --once
