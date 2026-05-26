@@ -85,10 +85,10 @@ void setup()
   Serial.begin(115200);
   pinMode(LED_PIN, OUTPUT);
 
-  IPAddress agent_ip(192, 168, 18, 22); // <- seu IP
+  IPAddress agent_ip(172, 16, 5, 190); // <- seu IP
   size_t agent_port = 8888;
-  char ssid[] = "Fernando_2.4G"; // <- sua rede
-  char psk[] = "16032005";       // <- sua senha
+  char ssid[] = "IFSUL"; // <- sua rede
+  char psk[] = "";       // <- sua senha
 
   Serial.println("=== Vespa iniciando ===");
   set_microros_wifi_transports(ssid, psk, agent_ip, agent_port);

@@ -6,6 +6,37 @@ source /opt/ros/humble/setup.bash
 # Armadilha: Quando você apertar Ctrl+C, fecha tudo graciosamente
 trap "echo 'Encerrando todos os sistemas...'; kill 0" EXIT
 
+if [ "${GUI_MODE:-}" = "vnc" ]; then
+    echo "=========================================="
+    echo " 0. Iniciando desktop virtual VNC..."
+    echo "=========================================="
+
+    for cmd in Xvfb x11vnc fluxbox websockify; do
+        if ! command -v "${cmd}" >/dev/null 2>&1; then
+            echo "Dependencia ausente: ${cmd}. Rebuild a imagem com ./start_docker.sh."
+            exit 1
+        fi
+    done
+
+    export DISPLAY="${DISPLAY:-:99}"
+    export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/tmp/runtime-root}"
+    export QT_X11_NO_MITSHM=1
+    export LIBGL_ALWAYS_SOFTWARE=1
+    export MESA_GL_VERSION_OVERRIDE="${MESA_GL_VERSION_OVERRIDE:-3.3}"
+    export MESA_GLSL_VERSION_OVERRIDE="${MESA_GLSL_VERSION_OVERRIDE:-330}"
+
+    mkdir -p "${XDG_RUNTIME_DIR}"
+    chmod 700 "${XDG_RUNTIME_DIR}"
+
+    Xvfb "${DISPLAY}" -screen 0 1600x1000x24 +extension GLX +render -noreset >/tmp/xvfb.log 2>&1 &
+    sleep 2
+    fluxbox >/tmp/fluxbox.log 2>&1 &
+    x11vnc -display "${DISPLAY}" -forever -shared -rfbport 5900 -nopw >/tmp/x11vnc.log 2>&1 &
+    websockify --web=/usr/share/novnc 6080 localhost:5900 >/tmp/novnc.log 2>&1 &
+
+    echo "Desktop virtual pronto em http://localhost:6080/vnc.html"
+fi
+
 echo "=========================================="
 echo " 0. Compilando o Workspace (Garante que tudo existe)..."
 echo "=========================================="
@@ -49,7 +80,19 @@ sleep 10
 echo "=========================================="
 echo " 5. Iniciando o rviz (usado para visualizar o mapa do if)..."
 echo "=========================================="
-# Inicializa ele com base nas configurações modificadas no arquivo /config/map.rviz
-colcon build --packages-select sparki_interfaces sparki_core
-source install/setup.bash
-ros2 run rviz2 rviz2 -d /root/ros2_ws/src/sparki_core/config/map.rviz
+# Inicializa ele com base nas configurações modificadas no arquivo /config/map.rviz.
+# Em Docker sem X11/Wayland disponível, o RViz falha com erro do plugin Qt "xcb".
+if [ "${RUN_RVIZ:-auto}" = "0" ] || [ "${RUN_RVIZ:-auto}" = "false" ]; then
+    echo "RViz desabilitado por RUN_RVIZ=${RUN_RVIZ}."
+    echo "Sistemas rodando. Pressione Ctrl+C para encerrar."
+    wait
+elif [ "${RUN_RVIZ:-auto}" != "1" ] && [ -z "${DISPLAY:-}" ] && [ -z "${WAYLAND_DISPLAY:-}" ]; then
+    echo "Nenhum display grafico encontrado; pulando RViz."
+    echo "Para abrir o RViz, rode o container com DISPLAY/X11 configurado ou use RUN_RVIZ=1."
+    echo "Sistemas rodando. Pressione Ctrl+C para encerrar."
+    wait
+else
+    colcon build --packages-select sparki_interfaces sparki_core
+    source install/setup.bash
+    ros2 run rviz2 rviz2 -d /root/ros2_ws/src/sparki_core/config/map.rviz
+fi

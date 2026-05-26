@@ -1,0 +1,21 @@
+ros2 service call /move_sequence sparki_interfaces/srv/MoveSequence "{
+  commands: [
+    {linear: -0.40, angular: 0.0, duration: 1.2},
+    {linear: 0.0, angular: 0.0, duration: 0.4},
+
+    {linear: 0.0, angular: 0.7, duration: 0.55},
+    {linear: 0.0, angular: 0.0, duration: 0.4},
+
+    {linear: -0.40, angular: 0.0, duration: 1.2},
+    {linear: 0.0, angular: 0.0, duration: 0.4},
+
+    {linear: 0.0, angular: 0.7, duration: 0.55},
+    {linear: 0.0, angular: 0.0, duration: 0.4},
+
+    {linear: -0.40, angular: 0.0, duration: 1.2},
+    {linear: 0.0, angular: 0.0, duration: 0.4},
+
+    {linear: 0.0, angular: 0.7, duration: 0.5},
+    {linear: 0.0, angular: 0.0, duration: 0.4},
+  ]
+}"
