@@ -14,6 +14,9 @@
 #define VEL_MAX 100
 #define VEL_LINEAR_MAX 0.5  // m/s máximo esperado do ROS
 #define VEL_ANGULAR_MAX 1.0 // rad/s máximo esperado do ROS
+#define MOTOR_DIR_GAIN 0.98f // Diminuindo está diminui a força do motor esquerdo
+#define MOTOR_ESQ_GAIN 1.0f 
+#define MOTOR_MIN_FORCA 60
 
 rcl_subscription_t subscriber;
 geometry_msgs__msg__Twist msg;
@@ -29,6 +32,34 @@ int toVespaSpeed(float ros_speed, float max_speed)
 {
   int speed = (int)((ros_speed / max_speed) * VEL_MAX);
   return constrain(speed, -VEL_MAX, VEL_MAX);
+}
+
+int aplicarCalibracaoMotor(int speed, float gain)
+{
+  speed = constrain(speed, -VEL_MAX, VEL_MAX);
+  if (speed == 0)
+    return 0;
+
+  int calibrated = (int)(speed * gain);
+  if (MOTOR_MIN_FORCA > 0 && abs(calibrated) < MOTOR_MIN_FORCA)
+    calibrated = calibrated > 0 ? MOTOR_MIN_FORCA : -MOTOR_MIN_FORCA;
+
+  return constrain(calibrated, -VEL_MAX, VEL_MAX);
+}
+
+void setMotorSpeeds(int speed_esq, int speed_dir)
+{
+  int esq = aplicarCalibracaoMotor(speed_esq, MOTOR_ESQ_GAIN);
+  int dir = aplicarCalibracaoMotor(speed_dir, MOTOR_DIR_GAIN);
+
+  if (esq == 0 && dir == 0)
+  {
+    motors.stop();
+    return;
+  }
+
+  motors.setSpeedLeft((int8_t)-esq);
+  motors.setSpeedRight((int8_t)-dir);
 }
 
 void cmd_vel_callback(const void *msgin)
@@ -52,10 +83,7 @@ void cmd_vel_callback(const void *msgin)
   if (angular == 0.0)
   {
     int speed = toVespaSpeed(linear, VEL_LINEAR_MAX);
-    if (speed > 0)
-      motors.forward(abs(speed));
-    else
-      motors.backward(abs(speed));
+    setMotorSpeeds(speed, speed);
     return;
   }
 
@@ -65,9 +93,9 @@ void cmd_vel_callback(const void *msgin)
     int speed = toVespaSpeed(angular, VEL_ANGULAR_MAX);
     // angular > 0 = esquerda, angular < 0 = direita
     if (speed > 0)
-      motors.turn(-abs(speed), abs(speed)); // gira esquerda
+      setMotorSpeeds(-abs(speed), abs(speed)); // gira esquerda
     else
-      motors.turn(abs(speed), -abs(speed)); // gira direita
+      setMotorSpeeds(abs(speed), -abs(speed)); // gira direita
     return;
   }
 
@@ -77,7 +105,7 @@ void cmd_vel_callback(const void *msgin)
 
   int vel_esq = constrain(vel_linear - vel_angular, -VEL_MAX, VEL_MAX);
   int vel_dir = constrain(vel_linear + vel_angular, -VEL_MAX, VEL_MAX);
-  motors.turn(vel_esq, vel_dir);
+  setMotorSpeeds(vel_esq, vel_dir);
 }
 
 void setup()

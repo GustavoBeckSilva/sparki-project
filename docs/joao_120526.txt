@@ -19,3 +19,11 @@ ros2 service call /move_sequence sparki_interfaces/srv/MoveSequence "{
     {linear: 0.0, angular: 0.0, duration: 0.4},
   ]
 }"
+
+
+ros2 service call /move_sequence sparki_interfaces/srv/MoveSequence "{
+  commands: [
+    {linear: 0.00, angular: 0.0, duration: 4},
+    {linear: -0.20, angular: 0.0, duration: 0.4},
+  ]
+}"

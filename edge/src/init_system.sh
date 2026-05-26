@@ -49,7 +49,7 @@ source /root/ros2_ws/install/setup.bash
 echo "=========================================="
 echo " 1. Iniciando Simulação Gazebo..."
 echo "=========================================="
-ros2 launch turtlebot3_gazebo turtlebot3_world.launch.py &
+# ros2 launch turtlebot3_gazebo turtlebot3_world.launch.py &
 
 # Espera 8 segundos para o Gazebo abrir e a física carregar
 sleep 8 
