@@ -5,7 +5,7 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
-from sensor_msgs.msg import LaserScan
+from sensor_msgs.msg import LaserScan, Range
 
 from sparki_interfaces.srv import MoveRobot, MoveSequence, NavigateToWaypoint
 from sparki_interfaces.msg import MoveCmd
@@ -27,6 +27,10 @@ class UnifiedController(Node):
         
         self.scan_sub = self.create_subscription(
             LaserScan, '/scan', self.scan_callback, 10,
+            callback_group=self.callback_group)
+
+        self.sonar_sub = self.create_subscription(
+            Range, '/sonar', self.sonar_callback, 10,
             callback_group=self.callback_group)
         
         # pode ser removida
@@ -53,7 +57,9 @@ class UnifiedController(Node):
 
         self.x_atual = 0.0
         self.y_atual = 0.0
-        self.obstaculo_frente = False 
+        self._obstaculo_scan = False
+        self._obstaculo_sonar = False
+        self.obstaculo_frente = False
         
         self.get_logger().info("Sparki Controller Iniciado!")
 
@@ -129,14 +135,25 @@ class UnifiedController(Node):
     def scan_callback(self, msg):
         distancia_lida = msg.ranges[0]
         if distancia_lida == float('inf') or distancia_lida == 0.0:
-            distancia_lida = 3.5 
+            distancia_lida = 3.5
 
-        if distancia_lida < 0.40: 
-            if not self.obstaculo_frente:
-                self.get_logger().warn(f"OBSTÁCULO! Distância: {distancia_lida:.2f}m")
-            self.obstaculo_frente = True
-        else:
-            self.obstaculo_frente = False
+        prev = self._obstaculo_scan
+        self._obstaculo_scan = distancia_lida < 0.40
+        if self._obstaculo_scan and not prev:
+            self.get_logger().warn(f"OBSTÁCULO (scan)! Distância: {distancia_lida:.2f}m")
+        self.obstaculo_frente = self._obstaculo_scan or self._obstaculo_sonar
+
+    def sonar_callback(self, msg):
+        if msg.range < msg.min_range or msg.range > msg.max_range:
+            self._obstaculo_sonar = False
+            self.obstaculo_frente = self._obstaculo_scan or self._obstaculo_sonar
+            return
+
+        prev = self._obstaculo_sonar
+        self._obstaculo_sonar = msg.range < 0.40
+        if self._obstaculo_sonar and not prev:
+            self.get_logger().warn(f"OBSTÁCULO (sonar)! Distância: {msg.range:.2f}m")
+        self.obstaculo_frente = self._obstaculo_scan or self._obstaculo_sonar
 
     def motion_callback(self, msg):
         self.get_logger().info(f"Comando de Tópico Recebido: Linear {msg.linear}, Angular {msg.angular}, Duração {msg.duration}s")

@@ -5,10 +5,16 @@
 #include <rclc/rclc.h>
 #include <rclc/executor.h>
 #include <geometry_msgs/msg/twist.h>
+#include <sensor_msgs/msg/range.h>
 
 #include <RoboCore_Vespa.h>
 
 #define LED_PIN 15
+
+// HC-SR04: TRIG no conector I2C SDA (GPIO 21), ECHO no conector I2C SCL (GPIO 22)
+#define SONAR_TRIG_PIN 21
+#define SONAR_ECHO_PIN 22
+#define SONAR_INTERVALO_MS 100
 
 // Velocidade máxima mapeada para o range da Vespa (0-100)
 #define VEL_MAX 100
@@ -25,7 +31,49 @@ rclc_support_t support;
 rcl_allocator_t allocator;
 rcl_node_t node;
 
+rcl_publisher_t sonar_pub;
+sensor_msgs__msg__Range sonar_msg;
+rcl_timer_t sonar_timer;
+
 VespaMotors motors; // <- objeto dos motores
+
+float ler_distancia_sonar()
+{
+  digitalWrite(SONAR_TRIG_PIN, LOW);
+  delayMicroseconds(2);
+  digitalWrite(SONAR_TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(SONAR_TRIG_PIN, LOW);
+  Serial.print("ECHO antes do trigger: ");
+  Serial.println(digitalRead(SONAR_ECHO_PIN));
+  long duracao = pulseIn(SONAR_ECHO_PIN, HIGH, 38000); // timeout 38ms (max HC-SR04)
+  Serial.print("ECHO apos pulseIn: ");
+  Serial.println(digitalRead(SONAR_ECHO_PIN));
+  Serial.print("Sonar raw duracao (us): ");
+  Serial.println(duracao);
+  if (duracao == 0) {
+    Serial.println("Sonar TIMEOUT - sem eco recebido, retornando 5.0m");
+    return 5.0f;
+  }
+  if (duracao < 100) {
+    Serial.print("Sonar RUIDO ignorado (< 100us): ");
+    Serial.println(duracao);
+    return 5.0f;
+  }
+  float distancia = (duracao * 0.0343f) / 2.0f / 100.0f; // converte para metros
+  Serial.print("Sonar distancia calculada (m): ");
+  Serial.println(distancia);
+  return distancia;
+}
+
+void sonar_timer_callback(rcl_timer_t *timer, int64_t last_call_time)
+{
+  (void)last_call_time;
+  if (timer == NULL) return;
+  sonar_msg.range = ler_distancia_sonar();
+  Serial.println("Sonar:" + String(sonar_msg.range));
+  rcl_publish(&sonar_pub, &sonar_msg, NULL);
+}
 
 // Converte velocidade ROS (-1.0 a 1.0) para Vespa (-100 a 100)
 int toVespaSpeed(float ros_speed, float max_speed)
@@ -112,8 +160,11 @@ void setup()
 {
   Serial.begin(115200);
   pinMode(LED_PIN, OUTPUT);
+  pinMode(SONAR_TRIG_PIN, OUTPUT);
+  pinMode(SONAR_ECHO_PIN, INPUT);
+  digitalWrite(SONAR_TRIG_PIN, LOW);
 
-  IPAddress agent_ip(172, 16, 5, 190); // <- seu IP
+  IPAddress agent_ip(172, 16, 4, 50); // <- seu IP
   size_t agent_port = 8888;
   char ssid[] = "IFSUL"; // <- sua rede
   char psk[] = "";       // <- sua senha
@@ -142,8 +193,26 @@ void setup()
       "/cmd_vel");
 
   Serial.println("Subscriber criado");
-  rclc_executor_init(&executor, &support.context, 1, &allocator);
+
+  rclc_publisher_init_default(
+      &sonar_pub, &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Range),
+      "/sonar");
+
+  sonar_msg.radiation_type = sensor_msgs__msg__Range__ULTRASOUND;
+  sonar_msg.field_of_view = 0.26f; // ~15 graus em radianos
+  sonar_msg.min_range = 0.02f;
+  sonar_msg.max_range = 4.0f;
+  sonar_msg.range = 4.0f;
+
+  rclc_timer_init_default(
+      &sonar_timer, &support,
+      RCL_MS_TO_NS(SONAR_INTERVALO_MS),
+      sonar_timer_callback);
+
+  rclc_executor_init(&executor, &support.context, 2, &allocator);
   rclc_executor_add_subscription(&executor, &subscriber, &msg, &cmd_vel_callback, ON_NEW_DATA);
+  rclc_executor_add_timer(&executor, &sonar_timer);
 
   Serial.println("=== Setup completo ===");
 }
