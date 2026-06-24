@@ -1,68 +1,96 @@
-import React, { useState } from "react";
-import "./FormScreen.module.css";
+import { useState } from "react";
 import TextInput from "../../components/TextInput/TextInput";
+import styles from "./FormScreen.module.css";
 
-const FormScreen: React.FC = () => {
-  const [nome, setNome] = useState("");
-  const [email, setEmail] = useState("");
-  const [telefone, setTelefone] = useState("");
-  const [cidade, setCidade] = useState("");
+interface OrderRow {
+  direction: string;
+  angulation: string;
+  duration: string;
+}
 
-  const handleSubmit = () => {
-    console.log({
-      nome,
-      email,
-      telefone,
-      cidade,
-    });
+export default function FormScreen() {
+  // Iniciamos com uma fileira vazia
+  const [rows, setRows] = useState<OrderRow[]>([
+    { direction: "", angulation: "", duration: "" },
+  ]);
+
+  // Função para atualizar um campo específico de uma fileira específica
+  const handleInputChange = (index: number, field: keyof OrderRow, value: string) => {
+    const updatedRows = [...rows];
+    updatedRows[index][field] = value;
+    setRows(updatedRows);
   };
 
-  return (
-    <div className="page-container">
-      <div className="form-card">
-        <h1 className="form-title">Cadastro</h1>
+  // Adiciona uma nova fileira de campos
+  const addRow = () => {
+    setRows([...rows, { direction: "", angulation: "", duration: "" }]);
+  };
 
-        <p className="form-subtitle">
-          Preencha suas informações abaixo
+  // Remove uma fileira específica pelo index
+  const removeRow = (index: number) => {
+    // Evita remover se só houver uma fileira (opcional, remova a validação se quiser permitir 0 fileiras)
+    if (rows.length > 1) {
+      setRows(rows.filter((_, i) => i !== index));
+    }
+  };
+
+  function salvar() {
+    console.log("Ordens enviadas:", rows);
+  }
+
+  return (
+    <div className={styles.container}>
+      <div className={styles.card}>
+        <h1 className={styles.title}>Sparki</h1>
+
+        <p className={styles.subtitle}>
+          Envie ordens ao Sparki, o carrinho que anda vruuummmmmm !!!
         </p>
 
-        <TextInput
-          label="Nome"
-          value={nome}
-          onChange={setNome}
-          placeholder="Digite seu nome"
-        />
+        <div className={styles.formContainer}>
+          {rows.map((row, index) => (
+            <div key={index} className={styles.row}>
+              <TextInput
+                value={row.direction}
+                onChange={(val) => handleInputChange(index, "direction", val)}
+                placeholder="Insira direção"
+              />
 
-        <TextInput
-          label="Email"
-          value={email}
-          onChange={setEmail}
-          placeholder="Digite seu email"
-        />
+              <TextInput
+                value={row.angulation}
+                onChange={(val) => handleInputChange(index, "angulation", val)}
+                placeholder="Insira a angulação"
+              />
 
-        <TextInput
-          label="Telefone"
-          value={telefone}
-          onChange={setTelefone}
-          placeholder="Digite seu telefone"
-        />
+              <TextInput
+                value={row.duration}
+                onChange={(val) => handleInputChange(index, "duration", val)}
+                placeholder="Insira a duração"
+              />
 
-        <TextInput
-          label="Cidade"
-          value={cidade}
-          onChange={setCidade}
-          placeholder="Digite sua cidade"
-        />
+              <button
+                type="button"
+                className={styles.removeButton}
+                onClick={() => removeRow(index)}
+                disabled={rows.length === 1} // Desabilita se for a única fileira restante
+                title="Remover fileira"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
 
-        <button
-          className="submit-button"
-          onClick={handleSubmit}
-        >
-          Salvar Cadastro
-        </button>
+        <div className={styles.actionsContainer}>
+          <button type="button" className={styles.addButton} onClick={addRow}>
+            + Adicionar Fileira
+          </button>
+
+          <button className={styles.button} onClick={salvar}>
+            Salvar Cadastro
+          </button>
+        </div>
       </div>
     </div>
   );
-};
-
-export default FormScreen;
+}

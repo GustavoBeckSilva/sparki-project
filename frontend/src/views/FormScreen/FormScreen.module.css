@@ -1,66 +1,135 @@
-.page-container {
+.container {
   min-height: 100vh;
-  background: #f5f7fb;
-
   display: flex;
   justify-content: center;
   align-items: center;
-
   padding: 32px;
+  background: #f3f5fb;
 }
 
-.form-card {
+.card {
   width: 100%;
-  max-width: 550px;
-
+  max-width: 800px; /* Aumentado ligeiramente para acomodar o botão de remover */
   background: white;
-
   padding: 40px;
-
   border-radius: 28px;
-
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
 }
 
-.form-title {
+.title {
   margin: 0;
+  text-align: center;
   color: #09069c;
-  font-size: 32px;
+  font-size: 42px;
   font-weight: 700;
 }
 
-.form-subtitle {
+.subtitle {
+  text-align: center;
+  color: #666;
   margin-top: 8px;
   margin-bottom: 32px;
-  color: #666;
 }
 
-.submit-button {
+/* Container que envolve todas as linhas */
+.formContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+/* Layout de cada fileira individual */
+.row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
   width: 100%;
+}
 
-  margin-top: 12px;
-  padding: 16px;
+/* Ajustando o TextInput para ocupar espaço equivalente na row */
+.row > div, 
+.row > input {
+  flex: 1;
+  max-width: 100%;
+}
 
+/* Botão de excluir fileira (X) */
+.removeButton {
+  background: #ff4d4d;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s, transform 0.1s;
+  flex-shrink: 0;
+}
+
+.removeButton:hover:not(:disabled) {
+  background: #cc0000;
+  transform: scale(1.05);
+}
+
+.removeButton:disabled {
+  background: #e5e4e7;
+  color: #a19da6;
+  cursor: not-allowed;
+}
+
+/* Container inferior para os botões de ação */
+.actionsContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  border-top: 1px solid #e5e4e7;
+  padding-top: 24px;
+}
+
+/* Botão de Adicionar Nova Fileira */
+.addButton {
+  padding: 14px 20px;
+  border: 2px dashed #09069c;
+  border-radius: 16px;
+  background: transparent;
+  color: #09069c;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.2s;
+}
+
+.addButton:hover {
+  background: rgba(9, 6, 156, 0.05);
+  transform: translateY(-2px);
+}
+
+/* Botão de Salvar original */
+.button {
+  width: 220px;
+  padding: 14px 20px;
   border: none;
   border-radius: 16px;
-
-  background-color: #09069c;
+  background: #09069c;
   color: white;
-
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
-
   cursor: pointer;
-
-  transition: all 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
 
-.submit-button:hover {
+.button:hover {
   transform: translateY(-2px);
-
   box-shadow: 0 8px 20px rgba(9, 6, 156, 0.25);
 }
 
-.submit-button:active {
+.button:active {
   transform: translateY(0);
 }
