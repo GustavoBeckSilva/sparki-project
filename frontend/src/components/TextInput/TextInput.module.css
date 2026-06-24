@@ -12,6 +12,7 @@
   outline: none;
 
   background: #fafafa;
+  color: black;
 
   transition:
     border-color 0.2s ease,

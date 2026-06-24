@@ -9,33 +9,49 @@ interface OrderRow {
 }
 
 export default function FormScreen() {
-  // Iniciamos com uma fileira vazia
+  const [isFormSent, setIsFormSent] = useState(false);
   const [rows, setRows] = useState<OrderRow[]>([
     { direction: "", angulation: "", duration: "" },
   ]);
+  
+  // Estado para guardar mensagem de erro de validação (opcional, mas melhora a UX)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Função para atualizar um campo específico de uma fileira específica
   const handleInputChange = (index: number, field: keyof OrderRow, value: string) => {
+    // Limpa o erro assim que o usuário voltar a digitar
+    if (errorMessage) setErrorMessage(null);
+
     const updatedRows = [...rows];
     updatedRows[index][field] = value;
     setRows(updatedRows);
   };
 
-  // Adiciona uma nova fileira de campos
   const addRow = () => {
     setRows([...rows, { direction: "", angulation: "", duration: "" }]);
   };
 
-  // Remove uma fileira específica pelo index
   const removeRow = (index: number) => {
-    // Evita remover se só houver uma fileira (opcional, remova a validação se quiser permitir 0 fileiras)
     if (rows.length > 1) {
       setRows(rows.filter((_, i) => i !== index));
     }
   };
 
   function salvar() {
-    console.log("Ordens enviadas:", rows);
+    // --- VALIDAÇÃO DOS CAMPOS ---
+    // .some() verifica se pelo menos um campo de alguma fileira está vazio
+    const hasEmptyFields = rows.some(
+      (row) => !row.direction.trim() || !row.angulation.trim() || !row.duration.trim()
+    );
+
+    if (hasEmptyFields) {
+      setErrorMessage("Por favor, preencha todos os campos de todas as fileiras antes de salvar.");
+      return; // Bloqueia a execução do envio/salvamento aqui
+    }
+
+    // Se passar na validação:
+    setErrorMessage(null);
+    console.log("Ordens enviadas com sucesso:", rows);
+    setIsFormSent(true);
   }
 
   return (
@@ -46,6 +62,13 @@ export default function FormScreen() {
         <p className={styles.subtitle}>
           Envie ordens ao Sparki, o carrinho que anda vruuummmmmm !!!
         </p>
+
+        {/* Exibe o texto de erro na tela se houver algum campo vazio */}
+        {errorMessage && (
+          <div className={styles.errorAlert}>
+            {errorMessage}
+          </div>
+        )}
 
         <div className={styles.formContainer}>
           {rows.map((row, index) => (
@@ -72,7 +95,7 @@ export default function FormScreen() {
                 type="button"
                 className={styles.removeButton}
                 onClick={() => removeRow(index)}
-                disabled={rows.length === 1} // Desabilita se for a única fileira restante
+                disabled={rows.length === 1}
                 title="Remover fileira"
               >
                 ✕
