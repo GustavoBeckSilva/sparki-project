@@ -5,7 +5,7 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
-from sensor_msgs.msg import LaserScan, Range
+from std_msgs.msg import Bool  # <-- Importamos o Bool para a emergência
 
 from sparki_interfaces.srv import MoveRobot, MoveSequence, NavigateToWaypoint
 from sparki_interfaces.msg import MoveCmd
@@ -25,15 +25,11 @@ class UnifiedController(Node):
             Odometry, '/odom', self.odom_callback, 10,
             callback_group=self.callback_group)
         
-        self.scan_sub = self.create_subscription(
-            LaserScan, '/scan', self.scan_callback, 10,
-            callback_group=self.callback_group)
-
-        self.sonar_sub = self.create_subscription(
-            Range, '/sonar', self.sonar_callback, 10,
+        self.emergency_sub = self.create_subscription(
+            Bool, '/emergency_stop', self.emergency_callback, 10,
             callback_group=self.callback_group)
         
-        # pode ser removida
+        # pode ser removida depois
         self.motion_sub = self.create_subscription(
             MoveCmd, '/motion_cmd', self.motion_callback, 10,
             callback_group=self.callback_group)
@@ -57,8 +53,7 @@ class UnifiedController(Node):
 
         self.x_atual = 0.0
         self.y_atual = 0.0
-        self._obstaculo_scan = False
-        self._obstaculo_sonar = False
+        
         self.obstaculo_frente = False
         
         self.get_logger().info("Sparki Controller Iniciado!")
@@ -72,6 +67,11 @@ class UnifiedController(Node):
         cosy = 1.0 - 2.0 * (q.y * q.y + q.z * q.z)
         self.yaw_atual = math.atan2(siny, cosy)
 
+    def emergency_callback(self, msg):
+        self.obstaculo_frente = msg.data
+        if self.obstaculo_frente:
+            self.get_logger().warn("Parada de emergência acionada pelo Collision Detector!")
+            self.parar()
     
     def handle_navigate_request(self, request, response):
         alvo_x = request.x
@@ -79,33 +79,26 @@ class UnifiedController(Node):
 
         dx = alvo_x - self.x_atual
         dy = alvo_y - self.y_atual
-        # Faz o cálculo de arco tangente em radianos para decidir o ângulo que o robô precisa virar para chegar no destino
         angulo_alvo = math.atan2(dy, dx)
-        # Faz o cálculo do módulo do vetor 
         distancia = math.sqrt(dx**2 + dy**2)
  
         delta_angulo = angulo_alvo - self.yaw_atual
-        # normalização do ângulo para o robô não virar desnecessariamente 
         while delta_angulo > math.pi:  delta_angulo -= 2 * math.pi
         while delta_angulo < -math.pi: delta_angulo += 2 * math.pi
 
         self.get_logger().info(f"Rotacionando {math.degrees(delta_angulo):.1f}° depois movendo {distancia:.2f}m")
 
-        # Rotaciona no lugar
         twist = Twist()
         twist.angular.z = 0.5 if delta_angulo > 0 else -0.5
-        # O tempo é dado pelo cálculo (ângulo / velocidade)
         tempo_rotacao = abs(delta_angulo) / 0.5
 
         start = time.time()
-        # enquanto estiver dentro do tempo previsto publica a velocidade até finalizar a rotação
         while time.time() - start < tempo_rotacao:
             self.cmd_vel_pub.publish(twist)
             time.sleep(0.1)
         self.parar()
         time.sleep(0.3)
 
-        # Move em linha reta monitorando obstáculos
         twist = Twist()
         twist.linear.x = 0.2
         start_x, start_y = self.x_atual, self.y_atual
@@ -117,8 +110,6 @@ class UnifiedController(Node):
                 response.mensagem = f"Obstáculo detectado antes de atingir ({alvo_x}, {alvo_y})"
                 return response
 
-            # Distância já percorrida pelo robô, para determinar em que posição ele parou
-            # TODO: Salvar somente o x e y de onde o robô parou
             percorrido = math.sqrt((self.x_atual - start_x)**2 + (self.y_atual - start_y)**2)
             if percorrido >= distancia:
                 break
@@ -131,29 +122,6 @@ class UnifiedController(Node):
         response.mensagem = f"Waypoint ({alvo_x}, {alvo_y}) atingido."
         self.get_logger().info(response.mensagem)
         return response
-
-    def scan_callback(self, msg):
-        distancia_lida = msg.ranges[0]
-        if distancia_lida == float('inf') or distancia_lida == 0.0:
-            distancia_lida = 3.5
-
-        prev = self._obstaculo_scan
-        self._obstaculo_scan = distancia_lida < 0.40
-        if self._obstaculo_scan and not prev:
-            self.get_logger().warn(f"OBSTÁCULO (scan)! Distância: {distancia_lida:.2f}m")
-        self.obstaculo_frente = self._obstaculo_scan or self._obstaculo_sonar
-
-    def sonar_callback(self, msg):
-        if msg.range < msg.min_range or msg.range > msg.max_range:
-            self._obstaculo_sonar = False
-            self.obstaculo_frente = self._obstaculo_scan or self._obstaculo_sonar
-            return
-
-        prev = self._obstaculo_sonar
-        self._obstaculo_sonar = msg.range < 0.40
-        if self._obstaculo_sonar and not prev:
-            self.get_logger().warn(f"OBSTÁCULO (sonar)! Distância: {msg.range:.2f}m")
-        self.obstaculo_frente = self._obstaculo_scan or self._obstaculo_sonar
 
     def motion_callback(self, msg):
         self.get_logger().info(f"Comando de Tópico Recebido: Linear {msg.linear}, Angular {msg.angular}, Duração {msg.duration}s")
@@ -203,8 +171,6 @@ class UnifiedController(Node):
             
             self.cmd_vel_pub.publish(msg)
             time.sleep(0.1)
-
-
 
     def handle_sequence_request(self, req, res):
         self.get_logger().info(f"Iniciando Sequência de {len(req.commands)} comandos...")

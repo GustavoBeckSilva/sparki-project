@@ -12,6 +12,8 @@ RUN apt-get update && apt-get install -y \
     novnc \
     websockify \
     mesa-utils \
+    mosquitto \
+    mosquitto-clients \
     && rm -rf /var/lib/apt/lists/*
 
 RUN apt-get update && apt-get install -y \
@@ -23,11 +25,12 @@ RUN apt-get update && apt-get install -y \
     ros-humble-turtlebot3-teleop \
     ros-humble-robot-localization
 
+RUN pip3 install paho-mqtt==1.6.1
+
 ENV TURTLEBOT3_MODEL=waffle_pi
 ENV GAZEBO_MODEL_PATH=/opt/ros/humble/share/turtlebot3_gazebo/models
 
 WORKDIR /root/ros2_ws
 
-# Carrega o ambiente ROS2 automaticamente ao iniciar o container
 RUN echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc
 CMD ["bash"]

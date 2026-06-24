@@ -27,8 +27,8 @@ setup(
     entry_points={
         'console_scripts': [
             'controller = sparki_core.movement_controller:main',
-            'motion_controller = sparki_core.motion_controller:main',
-            'sequence_executor = sparki_core.sequence_executor:main',
+            'collision_detector = sparki_core.collision_detector:main',
+            'mqtt_bridge = sparki_core.mqtt_bridge:main',
         ],
     },
 )

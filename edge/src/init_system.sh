@@ -71,8 +71,16 @@ ros2 launch rosbridge_server rosbridge_websocket_launch.xml &
 sleep 3
 
 echo "=========================================="
-echo " 4. Iniciando Controlador Main (Sparki)..."
+echo " 3.5. Iniciando Broker MQTT..."
 echo "=========================================="
+# Inicia o broker Mosquitto em background
+mosquitto -d
+
+echo "=========================================="
+echo " 4. Iniciando Módulos do Robô..."
+echo "=========================================="
+ros2 run sparki_core collision_detector &
+ros2 run sparki_core mqtt_bridge &
 # O controlador fica rodando "preso" no terminal para você ver os logs
 ros2 run sparki_core controller &
 
