@@ -1,6 +1,7 @@
 import { useState } from "react";
 import TextInput from "../../components/TextInput/TextInput";
 import styles from "./FormScreen.module.css";
+import { SendMoveSequence } from "../../repository/MoveSequence"
 
 interface OrderRow {
   direction: string;
@@ -36,23 +37,42 @@ export default function FormScreen() {
     }
   };
 
-  function salvar() {
-    // --- VALIDAÇÃO DOS CAMPOS ---
-    // .some() verifica se pelo menos um campo de alguma fileira está vazio
-    const hasEmptyFields = rows.some(
-      (row) => !row.direction.trim() || !row.angulation.trim() || !row.duration.trim()
+async function salvar() {
+  const hasEmptyFields = rows.some(
+    (row) =>
+      !row.direction.trim() ||
+      !row.angulation.trim() ||
+      !row.duration.trim()
+  );
+
+  if (hasEmptyFields) {
+    setErrorMessage(
+      "Por favor, preencha todos os campos de todas as fileiras antes de salvar."
     );
-
-    if (hasEmptyFields) {
-      setErrorMessage("Por favor, preencha todos os campos de todas as fileiras antes de salvar.");
-      return; // Bloqueia a execução do envio/salvamento aqui
-    }
-
-    // Se passar na validação:
-    setErrorMessage(null);
-    console.log("Ordens enviadas com sucesso:", rows);
-    setIsFormSent(true);
+    return;
   }
+
+  setErrorMessage(null);
+  setIsFormSent(true);
+
+  try {
+    const result = await SendMoveSequence(rows);
+
+    if (result) {
+      setRows([
+        {
+          direction: "",
+          angulation: "",
+          duration: "",
+        },
+      ]);
+    }
+  } catch (error) {
+    console.error(error);
+  } finally {
+    setIsFormSent(false);
+  }
+}
 
   return (
     <div className={styles.container}>
@@ -109,8 +129,19 @@ export default function FormScreen() {
             + Adicionar Fileira
           </button>
 
-          <button className={styles.button} onClick={salvar}>
-            Salvar Cadastro
+         <button
+            className={styles.button}
+            onClick={salvar}
+            disabled={isFormSent}
+          >
+            {isFormSent ? (
+              <>
+                <span className={styles.spinner}></span>
+                Enviando...
+              </>
+            ) : (
+              "Salvar Cadastro"
+            )}
           </button>
         </div>
       </div>
