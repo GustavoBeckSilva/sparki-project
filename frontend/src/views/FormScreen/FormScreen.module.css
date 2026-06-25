@@ -111,6 +111,52 @@
   transform: translateY(-2px);
 }
 
+/* FormScreen.module.css */
+
+.telemetryContainer {
+  display: flex;
+  justify-content: space-around;
+  padding: 16px;
+  margin-top: 5%;
+  border-radius: 16px;
+  margin-bottom: 24px;
+  transition: all 0.3s ease;
+  border: 1px solid transparent;
+}
+
+/* Estado quando o robô está livre (Normal) */
+.telemetryContainer.statusLivre {
+  background-color: #f0fdf4;
+  border-color: #86efac;
+}
+
+/* Estado quando o robô encontra um obstáculo (Emergência) */
+.telemetryContainer.statusEmergencia {
+  background-color: #ffebeb;
+  border-color: #f87171;
+}
+
+.telemetryGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.telemetryLabel {
+  color: #666;
+  font-size: 14px;
+}
+
+.telemetryValue {
+  display: block;
+}
+
+/* Cores dinâmicas para os valores */
+.valueOnline { color: green; }
+.valueOffline { color: red; }
+.valueLivre { color: #166534; }
+.valueEmergencia { color: red; }
+.valueDefault { color: #111827; }
+
 /* Botão de Salvar original */
 .button {
   width: 220px;

@@ -3,6 +3,8 @@ import TextInput from "../../components/TextInput/TextInput";
 import styles from "./FormScreen.module.css";
 import { SendMoveSequence } from "../../repository/MoveSequence"
 
+import { useRobotTelemetry } from "../../repository/RobotEventConnection";
+
 interface OrderRow {
   direction: string;
   angulation: string;
@@ -17,6 +19,8 @@ export default function FormScreen() {
   
   // Estado para guardar mensagem de erro de validação (opcional, mas melhora a UX)
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const {telemetry, isConnected} = useRobotTelemetry();
 
   const handleInputChange = (index: number, field: keyof OrderRow, value: string) => {
     // Limpa o erro assim que o usuário voltar a digitar
@@ -143,6 +147,33 @@ async function salvar() {
               "Salvar Cadastro"
             )}
           </button>
+        </div>
+
+        <div className={`${styles.telemetryContainer} ${
+          telemetry.status === 'EMERGENCIA_OBSTACULO' ? styles.statusEmergencia : styles.statusLivre
+        }`}>
+          <div className={styles.telemetryGroup}>
+            <span className={styles.telemetryLabel}>Status API:</span>
+            <strong className={`${styles.telemetryValue} ${isConnected ? styles.valueOnline : styles.valueOffline}`}>
+              {isConnected ? "● Online" : "○ Offline"}
+            </strong>
+          </div>
+
+          <div className={styles.telemetryGroup}>
+            <span className={styles.telemetryLabel}>Status do Robô:</span>
+            <strong className={`${styles.telemetryValue} ${
+              telemetry.status === 'EMERGENCIA_OBSTACULO' ? styles.valueEmergencia : styles.valueLivre
+            }`}>
+              {telemetry.status}
+            </strong>
+          </div>
+
+          <div className={styles.telemetryGroup}>
+            <span className={styles.telemetryLabel}>Sonar:</span>
+            <strong className={`${styles.telemetryValue} ${styles.valueDefault}`}>
+              {telemetry.sonar} m
+            </strong>
+          </div>
         </div>
       </div>
     </div>
