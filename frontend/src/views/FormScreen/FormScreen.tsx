@@ -21,6 +21,7 @@ export default function FormScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const {telemetry, isConnected} = useRobotTelemetry();
+  const [status, setStatus] = useState("PARADO");
 
   const handleInputChange = (index: number, field: keyof OrderRow, value: string) => {
     // Limpa o erro assim que o usuário voltar a digitar
@@ -58,11 +59,16 @@ async function salvar() {
 
   setErrorMessage(null);
   setIsFormSent(true);
+  setStatus("ANDANDO");
 
   try {
     const result = await SendMoveSequence(rows);
 
-    if (result) {
+    if(result.isSucess){
+      setStatus("CONCLUÍDO")
+    }
+
+    if (result.isSucess) {
       setRows([
         {
           direction: "",
@@ -70,6 +76,15 @@ async function salvar() {
           duration: "",
         },
       ]);
+    }
+    else{
+      if(result.data.includes("EMERGÊNCIA"))
+      {
+        setStatus("EMERGENCIA_OBSTACULO");
+      }
+      else{
+        setStatus("ERROR");
+      }
     }
   } catch (error) {
     console.error(error);
@@ -150,7 +165,7 @@ async function salvar() {
         </div>
 
         <div className={`${styles.telemetryContainer} ${
-          telemetry.status === 'EMERGENCIA_OBSTACULO' ? styles.statusEmergencia : styles.statusLivre
+          status === 'EMERGENCIA_OBSTACULO' ? styles.statusEmergencia : styles.statusLivre
         }`}>
           <div className={styles.telemetryGroup}>
             <span className={styles.telemetryLabel}>Status API:</span>
@@ -164,7 +179,7 @@ async function salvar() {
             <strong className={`${styles.telemetryValue} ${
               telemetry.status === 'EMERGENCIA_OBSTACULO' ? styles.valueEmergencia : styles.valueLivre
             }`}>
-              {telemetry.status}
+              {status}
             </strong>
           </div>
 

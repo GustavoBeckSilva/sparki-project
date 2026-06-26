@@ -4,14 +4,19 @@ interface Command{
     duration: string;
 }
 
-export async function SendMoveSequence(commands:Command[]) : Promise<boolean> {
+interface SequenceReturn{
+    isSucess: boolean;
+    data: string
+}
+
+export async function SendMoveSequence(commands:Command[]) : Promise<SequenceReturn> {
     const url = 'http://localhost:3000/move_sequence';
 
     try
     {
         const response = await fetch(url, {
             method: 'POST',
-      headers: {
+            headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ commands }),
@@ -21,9 +26,11 @@ export async function SendMoveSequence(commands:Command[]) : Promise<boolean> {
             throw new Error(`Erro na requisição: ${response.status} ${response.statusText}`);
         }
         else
-            return true;
+            var data: SequenceReturn = await response.json();
+            return data;
     }
-    catch{
-        return false;
+    catch(err){
+        var errormessage: SequenceReturn = {isSucess: false, data: "API ERROR:"+err};
+        return errormessage;
     }
 }
