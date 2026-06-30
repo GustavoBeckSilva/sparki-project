@@ -1,194 +1,169 @@
-import { useState } from "react";
-import TextInput from "../../components/TextInput/TextInput";
-import styles from "./FormScreen.module.css";
-import { SendMoveSequence } from "../../repository/MoveSequence"
+import React, { useState } from 'react';
+import styles from './FormScreen.module.css';
+import { SendMoveSequence } from '../../repository/MoveSequence';
 
-import { useRobotTelemetry } from "../../repository/RobotEventConnection";
+type Direction = 'esquerda' | 'frente' | 'direita' | 'tras';
 
-interface OrderRow {
-  direction: string;
-  angulation: string;
-  duration: string;
-}
-
-export default function FormScreen() {
-  const [isFormSent, setIsFormSent] = useState(false);
-  const [rows, setRows] = useState<OrderRow[]>([
-    { direction: "", angulation: "", duration: "" },
-  ]);
+export function FormScreen() {
+  // O slider linear agora é apenas "Velocidade Absoluta" (0.0 a 1.0)
+  const [speed, setSpeed] = useState<number>(0.5); 
+  const [duration, setDuration] = useState<number>(3.0);
+  const [direction, setDirection] = useState<Direction>('frente');
+  const [intensity, setIntensity] = useState<number>(0.5);
   
-  // Estado para guardar mensagem de erro de validação (opcional, mas melhora a UX)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [status, setStatus] = useState<'idle' | 'moving' | 'success' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState<string>('');
 
-  const {telemetry, isConnected} = useRobotTelemetry();
-  const [status, setStatus] = useState("PARADO");
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus('moving');
+    setErrorMessage('');
 
-  const handleInputChange = (index: number, field: keyof OrderRow, value: string) => {
-    // Limpa o erro assim que o usuário voltar a digitar
-    if (errorMessage) setErrorMessage(null);
+    // Lógica correta de Direção x Aceleração
+    let finalLinear = 0.0;
+    let finalAngular = 0.0;
 
-    const updatedRows = [...rows];
-    updatedRows[index][field] = value;
-    setRows(updatedRows);
-  };
+    if (direction === 'frente') {
+      finalLinear = speed;
+    } else if (direction === 'tras') {
+      finalLinear = -speed; // Aplica a marcha-atrás aqui!
+    } else if (direction === 'esquerda') {
+      finalLinear = speed; // Se speed for 0, o robô faz pião no lugar
+      finalAngular = intensity;
+    } else if (direction === 'direita') {
+      finalLinear = speed;
+      finalAngular = -intensity;
+    }
 
-  const addRow = () => {
-    setRows([...rows, { direction: "", angulation: "", duration: "" }]);
-  };
+    const command = { linear: finalLinear, angular: finalAngular, duration };
 
-  const removeRow = (index: number) => {
-    if (rows.length > 1) {
-      setRows(rows.filter((_, i) => i !== index));
+    try {
+      const response = await SendMoveSequence([command]);
+      
+      if (response.isSuccess) {
+        setStatus('success');
+      } else {
+        setStatus('error');
+        setErrorMessage(response.message || 'Obstáculo detetado!');
+      }
+    } catch (error) {
+      console.error(error);
+      setStatus('error');
+      setErrorMessage('Erro ao conectar com o robô.');
+    } finally {
+      setTimeout(() => setStatus('idle'), 3000);
     }
   };
 
-async function salvar() {
-  const hasEmptyFields = rows.some(
-    (row) =>
-      !row.direction.trim() ||
-      !row.angulation.trim() ||
-      !row.duration.trim()
-  );
+  // --- LÓGICA MATEMÁTICA DA ANIMAÇÃO (Física Real) ---
+  // Calculamos as variáveis com base no que vai acontecer na vida real!
+  
+  // 1. Distância Total: Velocidade (m/s) * Tempo (s)
+  // Vamos assumir que 1 metro = 120 pixels na nossa ecrã
+  let transY = 0;
+  let rotDeg = 0;
 
-  if (hasEmptyFields) {
-    setErrorMessage(
-      "Por favor, preencha todos os campos de todas as fileiras antes de salvar."
-    );
-    return;
+  if (direction === 'frente') {
+    transY = -(speed * duration * 120);
+  } else if (direction === 'tras') {
+    transY = (speed * duration * 120); // Move para baixo
+  } else if (direction === 'esquerda' || direction === 'direita') {
+    // Curva ou Rotação no lugar
+    transY = -(speed * duration * 120);
+    
+    // Rotação Total: Velocidade Angular (rad/s) * Tempo (s) = Radianos totais
+    // 1 Radiano = ~57.29 graus. O CSS roda no sentido horário (positivo), mas o ROS roda no sentido anti-horário (positivo).
+    const signal = direction === 'esquerda' ? -1 : 1;
+    rotDeg = (intensity * duration * 57.29) * signal;
   }
 
-  setErrorMessage(null);
-  setIsFormSent(true);
-  setStatus("ANDANDO");
-
-  try {
-    const result = await SendMoveSequence(rows);
-
-    if(result.isSucess){
-      setStatus("CONCLUÍDO")
-    }
-
-    if (result.isSucess) {
-      setRows([
-        {
-          direction: "",
-          angulation: "",
-          duration: "",
-        },
-      ]);
-    }
-    else{
-      if(result.data.includes("EMERGÊNCIA"))
-      {
-        setStatus("EMERGENCIA_OBSTACULO");
-      }
-      else{
-        setStatus("ERROR");
-      }
-    }
-  } catch (error) {
-    console.error(error);
-  } finally {
-    setIsFormSent(false);
-  }
-}
+  // O Segredo de CSS para Curvas: Rodar o eixo primeiro (rotate), e depois andar no novo eixo (translateY)
+  const animationStyle: React.CSSProperties = {
+    transform: status === 'moving' || status === 'success' || status === 'error'
+      ? `rotate(${rotDeg}deg) translateY(${transY}px)` 
+      : 'rotate(0deg) translateY(0px)',
+    transition: status === 'moving' 
+      ? `transform ${duration}s ease-in-out` 
+      : 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)'
+  };
 
   return (
     <div className={styles.container}>
-      <div className={styles.card}>
-        <h1 className={styles.title}>Sparki</h1>
-
-        <p className={styles.subtitle}>
-          Envie ordens ao Sparki, o carrinho que anda vruuummmmmm !!!
-        </p>
-
-        {/* Exibe o texto de erro na tela se houver algum campo vazio */}
-        {errorMessage && (
-          <div className={styles.errorAlert}>
-            {errorMessage}
-          </div>
-        )}
-
-        <div className={styles.formContainer}>
-          {rows.map((row, index) => (
-            <div key={index} className={styles.row}>
-              <TextInput
-                value={row.direction}
-                onChange={(val) => handleInputChange(index, "direction", val)}
-                placeholder="Insira direção"
-              />
-
-              <TextInput
-                value={row.angulation}
-                onChange={(val) => handleInputChange(index, "angulation", val)}
-                placeholder="Insira a angulação"
-              />
-
-              <TextInput
-                value={row.duration}
-                onChange={(val) => handleInputChange(index, "duration", val)}
-                placeholder="Insira a duração"
-              />
-
-              <button
-                type="button"
-                className={styles.removeButton}
-                onClick={() => removeRow(index)}
-                disabled={rows.length === 1}
-                title="Remover fileira"
-              >
-                ✕
-              </button>
+      {/* LADO ESQUERDO: CONTROLES */}
+      <div className={styles.formSection}>
+        <h2 className={styles.title}>Painel de Navegação</h2>
+        
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          
+          <div className={styles.inputGroup}>
+            <label>Direção</label>
+            <div className={styles.directionButtons}>
+              <button type="button" className={`${styles.dirBtn} ${direction === 'esquerda' ? styles.active : ''}`} onClick={() => setDirection('esquerda')}>↰ Esq</button>
+              <button type="button" className={`${styles.dirBtn} ${direction === 'frente' ? styles.active : ''}`} onClick={() => setDirection('frente')}>↑ Frente</button>
+              <button type="button" className={`${styles.dirBtn} ${direction === 'tras' ? styles.active : ''}`} onClick={() => setDirection('tras')}>↓ Trás</button>
+              <button type="button" className={`${styles.dirBtn} ${direction === 'direita' ? styles.active : ''}`} onClick={() => setDirection('direita')}>↱ Dir</button>
             </div>
-          ))}
-        </div>
+          </div>
 
-        <div className={styles.actionsContainer}>
-          <button type="button" className={styles.addButton} onClick={addRow}>
-            + Adicionar Fileira
+          {/* Só mostra a intensidade se for uma curva */}
+          {(direction === 'esquerda' || direction === 'direita') && (
+            <div className={styles.inputGroup}>
+              <label>Força da Curva (Angular): {intensity.toFixed(1)} rad/s</label>
+              <input 
+                type="range" min="0.2" max="1.5" step="0.1" 
+                value={intensity} 
+                onChange={e => setIntensity(parseFloat(e.target.value))} 
+                className={styles.slider}
+              />
+              <div className={styles.sliderLabels}>
+                <span>Suave</span>
+                <span>Agressiva</span>
+              </div>
+            </div>
+          )}
+
+          <div className={styles.inputGroup}>
+            {/* O Slider de Velocidade agora é estritamente positivo (0 a 1) */}
+            <label>Aceleração (Linear): {speed.toFixed(1)} m/s</label>
+            <input 
+              type="range" min="0.0" max="1.0" step="0.1" 
+              value={speed} 
+              onChange={e => setSpeed(parseFloat(e.target.value))} 
+              className={styles.slider}
+            />
+            <div className={styles.sliderLabels}>
+              <span>0 (Pião / Parado)</span>
+              <span>Média</span>
+              <span>Máxima</span>
+            </div>
+          </div>
+
+          <div className={styles.inputGroup}>
+            <label>Tempo do Trajeto: {duration.toFixed(1)}s</label>
+            <input 
+              type="range" min="1.0" max="10.0" step="0.5" 
+              value={duration} 
+              onChange={e => setDuration(parseFloat(e.target.value))} 
+              className={styles.slider}
+            />
+          </div>
+
+          <button type="submit" disabled={status === 'moving'} className={styles.submitBtn}>
+            {status === 'moving' ? 'Robô em movimento...' : 'Disparar Comando'}
           </button>
+          
+          {status === 'success' && <div className={`${styles.statusMessage} ${styles.success}`}>✅ Destino alcançado com sucesso!</div>}
+          {status === 'error' && <div className={`${styles.statusMessage} ${styles.error}`}>⚠️ {errorMessage}</div>}
+        </form>
+      </div>
 
-         <button
-            className={styles.button}
-            onClick={salvar}
-            disabled={isFormSent}
-          >
-            {isFormSent ? (
-              <>
-                <span className={styles.spinner}></span>
-                Enviando...
-              </>
-            ) : (
-              "Salvar Cadastro"
-            )}
-          </button>
-        </div>
-
-        <div className={`${styles.telemetryContainer} ${
-          status === 'EMERGENCIA_OBSTACULO' ? styles.statusEmergencia : styles.statusLivre
-        }`}>
-          <div className={styles.telemetryGroup}>
-            <span className={styles.telemetryLabel}>Status API:</span>
-            <strong className={`${styles.telemetryValue} ${isConnected ? styles.valueOnline : styles.valueOffline}`}>
-              {isConnected ? "● Online" : "○ Offline"}
-            </strong>
-          </div>
-
-          <div className={styles.telemetryGroup}>
-            <span className={styles.telemetryLabel}>Status do Robô:</span>
-            <strong className={`${styles.telemetryValue} ${
-              telemetry.status === 'EMERGENCIA_OBSTACULO' ? styles.valueEmergencia : styles.valueLivre
-            }`}>
-              {status}
-            </strong>
-          </div>
-
-          <div className={styles.telemetryGroup}>
-            <span className={styles.telemetryLabel}>Sonar:</span>
-            <strong className={`${styles.telemetryValue} ${styles.valueDefault}`}>
-              {telemetry.sonar} m
-            </strong>
-          </div>
+      {/* LADO DIREITO: ARENA DO ROBÔ */}
+      <div className={styles.arena}>
+        <div className={styles.robot} style={animationStyle}>
+          <div className={styles.sonar}></div>
+          <div className={styles.wheel} style={{ left: '-7px' }}></div>
+          <div className={styles.wheel} style={{ right: '-7px' }}></div>
+          <div className={styles.chassis}></div>
         </div>
       </div>
     </div>

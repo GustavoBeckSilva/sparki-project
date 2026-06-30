@@ -1,31 +1,52 @@
+# ==========================================
+# 1. GERAL (Sistemas, IDEs e Arquivos Pesados)
+# ==========================================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.deb
+*.log
+*.zip
+*.tar.gz
 
+# ==========================================
+# 2. FRONTEND & BACKEND (Node.js / React / Express)
+# ==========================================
 node_modules/
 dist/
+build/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .env
+.env.*
 
+# ==========================================
+# 3. EDGE & SIMULATION (ROS 2 / Python)
+# ==========================================
 __pycache__/
 *.py[cod]
 *$py.class
 venv/
 .venv/
+.pytest_cache/
 
-# Simulation generated files
-simulation/build/
-simulation/install/
-simulation/log/
-simulation/COLCON_IGNORE
+# Pastas geradas pelo build do Colcon (ROS 2)
+# Pegará tanto na raiz do edge, na pasta src, quanto na simulation
+**/build/
+**/install/
+**/log/
+COLCON_IGNORE
 
-.DS_Store
-Thumbs.db
-.vscode/
-.idea/
+# ==========================================
+# 4. HARDWARE (PlatformIO / ESP32)
+# ==========================================
+.pio/
+hardware/build/
+hardware/.vscode/
 
+# ==========================================
+# 5. DOCKER & BANCO DE DADOS
+# ==========================================
 docker/pgdata/
-
-# ROS2 generated files
-edge/src/build/
-edge/src/install/
-edge/src/log/

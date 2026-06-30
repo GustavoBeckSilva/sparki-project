@@ -1,7 +1,10 @@
 import express, { Request, Response } from 'express';
+import cors from 'cors';
 import { moveRobotService, moveSequenceService, navigateToWaypoint } from './ros';
 
 export const app = express();
+
+app.use(cors());
 
 app.use(express.json());
 

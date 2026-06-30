@@ -1,36 +1,39 @@
-interface Command{
-    direction: string;
-    angulation: string;
-    duration: string;
+export interface Command {
+    linear: number;
+    angular: number;
+    duration: number;
 }
 
-interface SequenceReturn{
-    isSucess: boolean;
-    data: string
+export interface SequenceReturn {
+    isSuccess: boolean;
+    message: string;
 }
 
-export async function SendMoveSequence(commands:Command[]) : Promise<SequenceReturn> {
+export async function SendMoveSequence(commands: Command[]): Promise<SequenceReturn> {
     const url = 'http://localhost:3000/move_sequence';
 
-    try
-    {
+    try {
         const response = await fetch(url, {
             method: 'POST',
             headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ commands }),
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ commands }),
         });
 
         if (!response.ok) {
             throw new Error(`Erro na requisição: ${response.status} ${response.statusText}`);
         }
-        else
-            var data: SequenceReturn = await response.json();
-            return data;
-    }
-    catch(err){
-        var errormessage: SequenceReturn = {isSucess: false, data: "API ERROR:"+err};
-        return errormessage;
+
+        const apiData = await response.json();
+        
+        return {
+            // Verifica se a API devolveu sucesso
+            isSuccess: apiData.status === 'sucesso' || apiData.sucesso === true,
+            message: apiData.mensagem || 'Comando finalizado.'
+        };
+
+    } catch (err: any) {
+        return { isSuccess: false, message: "Erro de conexão: " + err.message };
     }
 }

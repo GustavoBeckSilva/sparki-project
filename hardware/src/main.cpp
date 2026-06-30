@@ -164,10 +164,10 @@ void setup()
   pinMode(SONAR_ECHO_PIN, INPUT);
   digitalWrite(SONAR_TRIG_PIN, LOW);
 
-  IPAddress agent_ip(172, 16, 4, 50); // <- seu IP
+  IPAddress agent_ip(192, 168, 18, 64);
   size_t agent_port = 8888;
-  char ssid[] = "IFSUL"; // <- sua rede
-  char psk[] = "";       // <- sua senha
+  char ssid[] = "Gustavo_2.4G";
+  char psk[] = "in123put";
 
   Serial.println("=== Vespa iniciando ===");
   set_microros_wifi_transports(ssid, psk, agent_ip, agent_port);
