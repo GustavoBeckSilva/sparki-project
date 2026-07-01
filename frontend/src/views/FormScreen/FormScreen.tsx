@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styles from './FormScreen.module.css';
 import { SendMoveSequence } from '../../repository/MoveSequence';
+import mqtt from 'mqtt'; // Importando a biblioteca MQTT
 
 type Direction = 'esquerda' | 'frente' | 'direita' | 'tras';
 
 export function FormScreen() {
-  // O slider linear agora é apenas "Velocidade Absoluta" (0.0 a 1.0)
+  // --- CONTROLES DE NAVEGAÇÃO ---
   const [speed, setSpeed] = useState<number>(0.5); 
   const [duration, setDuration] = useState<number>(3.0);
   const [direction, setDirection] = useState<Direction>('frente');
@@ -14,21 +15,62 @@ export function FormScreen() {
   const [status, setStatus] = useState<'idle' | 'moving' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
 
+  // --- NOVOS ESTADOS: TELEMETRIA MQTT ---
+  const [isPathClear, setIsPathClear] = useState<boolean>(true);
+  const [obstacleDistance, setObstacleDistance] = useState<string>("--");
+
+  // --- EFEITO DE CONEXÃO MQTT EM TEMPO REAL ---
+  useEffect(() => {
+    // Conecta ao Broker via WebSocket (A porta padrão para WS no Mosquitto é a 9001)
+    // Se o seu Mosquitto rodar em outra máquina, troque 'localhost' pelo IP dela.
+    const client = mqtt.connect('ws://localhost:9001');
+
+    client.on('connect', () => {
+      console.log('✅ Dashboard conectado ao Broker MQTT (Telemetria Ativa)');
+      // Assinando os tópicos que criamos no seu mqtt_bridge.py
+      client.subscribe('sparki/telemetry/sonar');
+      client.subscribe('sparki/telemetry/status');
+    });
+
+    client.on('message', (topic, message) => {
+      const payload = message.toString();
+      
+      if (topic === 'sparki/telemetry/sonar') {
+        setObstacleDistance(payload);
+      } else if (topic === 'sparki/telemetry/status') {
+        setIsPathClear(payload === 'LIVRE');
+      }
+    });
+
+    // Desconecta ao fechar ou trocar de tela
+    return () => {
+      if (client) client.end();
+    };
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Trava de Segurança no Dashboard: Impede envio de comando frontal se houver obstáculo
+    if (!isPathClear && direction === 'frente') {
+      setStatus('error');
+      setErrorMessage('Ação bloqueada: Há um obstáculo à frente!');
+      setTimeout(() => setStatus('idle'), 3500);
+      return;
+    }
+
     setStatus('moving');
     setErrorMessage('');
 
-    // Lógica correta de Direção x Aceleração
     let finalLinear = 0.0;
     let finalAngular = 0.0;
 
     if (direction === 'frente') {
       finalLinear = speed;
     } else if (direction === 'tras') {
-      finalLinear = -speed; // Aplica a marcha-atrás aqui!
+      finalLinear = -speed;
     } else if (direction === 'esquerda') {
-      finalLinear = speed; // Se speed for 0, o robô faz pião no lugar
+      finalLinear = speed;
       finalAngular = intensity;
     } else if (direction === 'direita') {
       finalLinear = speed;
@@ -44,40 +86,31 @@ export function FormScreen() {
         setStatus('success');
       } else {
         setStatus('error');
-        setErrorMessage(response.message || 'Obstáculo detetado!');
+        setErrorMessage(response.message || 'Colisão iminente detectada no trajeto!');
       }
     } catch (error) {
       console.error(error);
       setStatus('error');
-      setErrorMessage('Erro ao conectar com o robô.');
+      setErrorMessage('Erro de conexão com o sistema central do robô.');
     } finally {
       setTimeout(() => setStatus('idle'), 3000);
     }
   };
 
-  // --- LÓGICA MATEMÁTICA DA ANIMAÇÃO (Física Real) ---
-  // Calculamos as variáveis com base no que vai acontecer na vida real!
-  
-  // 1. Distância Total: Velocidade (m/s) * Tempo (s)
-  // Vamos assumir que 1 metro = 120 pixels na nossa ecrã
+  // --- LÓGICA DA ANIMAÇÃO DA INTERFACE ---
   let transY = 0;
   let rotDeg = 0;
 
   if (direction === 'frente') {
     transY = -(speed * duration * 120);
   } else if (direction === 'tras') {
-    transY = (speed * duration * 120); // Move para baixo
+    transY = (speed * duration * 120); 
   } else if (direction === 'esquerda' || direction === 'direita') {
-    // Curva ou Rotação no lugar
     transY = -(speed * duration * 120);
-    
-    // Rotação Total: Velocidade Angular (rad/s) * Tempo (s) = Radianos totais
-    // 1 Radiano = ~57.29 graus. O CSS roda no sentido horário (positivo), mas o ROS roda no sentido anti-horário (positivo).
     const signal = direction === 'esquerda' ? -1 : 1;
     rotDeg = (intensity * duration * 57.29) * signal;
   }
 
-  // O Segredo de CSS para Curvas: Rodar o eixo primeiro (rotate), e depois andar no novo eixo (translateY)
   const animationStyle: React.CSSProperties = {
     transform: status === 'moving' || status === 'success' || status === 'error'
       ? `rotate(${rotDeg}deg) translateY(${transY}px)` 
@@ -89,10 +122,21 @@ export function FormScreen() {
 
   return (
     <div className={styles.container}>
-      {/* LADO ESQUERDO: CONTROLES */}
+      {/* LADO ESQUERDO: CONTROLES E TELEMETRIA */}
       <div className={styles.formSection}>
         <h2 className={styles.title}>Painel de Navegação</h2>
         
+        {/* INDICADOR DE STATUS MQTT EM TEMPO REAL */}
+        <div className={styles.statusContainer}>
+          <div className={styles.statusIndicator}>
+            <div className={`${styles.dot} ${isPathClear ? styles.dotClear : styles.dotObstacle}`} />
+            <span>{isPathClear ? "Pista Livre" : "OBSTÁCULO NA PISTA!"}</span>
+          </div>
+          <div className={styles.distanceBadge}>
+            Sensor: {obstacleDistance} m
+          </div>
+        </div>
+
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
           <div className={styles.inputGroup}>
@@ -105,7 +149,6 @@ export function FormScreen() {
             </div>
           </div>
 
-          {/* Só mostra a intensidade se for uma curva */}
           {(direction === 'esquerda' || direction === 'direita') && (
             <div className={styles.inputGroup}>
               <label>Força da Curva (Angular): {intensity.toFixed(1)} rad/s</label>
@@ -123,7 +166,6 @@ export function FormScreen() {
           )}
 
           <div className={styles.inputGroup}>
-            {/* O Slider de Velocidade agora é estritamente positivo (0 a 1) */}
             <label>Aceleração (Linear): {speed.toFixed(1)} m/s</label>
             <input 
               type="range" min="0.0" max="1.0" step="0.1" 
@@ -132,7 +174,7 @@ export function FormScreen() {
               className={styles.slider}
             />
             <div className={styles.sliderLabels}>
-              <span>0 (Pião / Parado)</span>
+              <span>0 (Parado)</span>
               <span>Média</span>
               <span>Máxima</span>
             </div>

@@ -18,11 +18,11 @@ class CollisionDetector(Node):
         distancia = msg.ranges[0]
         if distancia == float('inf') or distancia == 0.0:
             distancia = 3.5
-        self.obstaculo_scan = distancia < 0.40
+        self.obstaculo_scan = distancia < 0.80
         self.publish_emergency_state()
 
     def sonar_callback(self, msg):
-        self.obstaculo_sonar = msg.range < 0.40
+        self.obstaculo_sonar = msg.range < 0.80
         self.publish_emergency_state()
 
     def publish_emergency_state(self):
